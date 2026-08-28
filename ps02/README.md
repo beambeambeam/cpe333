@@ -5,8 +5,10 @@ Problem Session 2 covers process creation, process lifetime, `fork()`, `wait()`,
 - `problem-session.md` – assignment requirements.
 - `src/` – starter C programs.
 - `Makefile` – portable build commands.
-- `reports/report.tex` – report source with current code and TODO placeholders.
 - `notes/` – experiment observations and report material.
+
+The CPE333 checkout contains no report source or screenshot directory. Keep
+those files in the group's separate submission workspace.
 
 ## Platform support
 
@@ -142,15 +144,9 @@ make
 
 ## Generate the PDF report
 
-`reports/report.tex` already contains the assignment structure, source-code listings, explanations, and placeholders for measured values and unfinished pipe variants.
-
-Use TeX Live, MacTeX, or another LaTeX distribution. Compile from the reports directory:
-
-```bash
-cd reports
-pdflatex report.tex
-pdflatex report.tex
-```
+Report source and screenshots are maintained outside this CPE333 checkout. Use
+TeX Live, MacTeX, or another LaTeX distribution in the group's submission
+workspace. The CPE333 source build does not depend on report files.
 
 Run LaTeX twice so the table of contents and references settle. Generated PDF and auxiliary files are ignored by Git.
 
