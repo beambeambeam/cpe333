@@ -26,6 +26,7 @@ cd CPE333
 
 - `ps02/` – Problem Session 2: process creation and pipes.
 - `ps03/` – Problem Session 3: process monitoring, job control, and scheduling.
+- `ps04/` – Problem Session 4: C storage classes, PIE vs `-no-pie`, and dynamic memory.
 
 Build PS02 programs:
 
@@ -39,6 +40,14 @@ Build PS03 scheduler:
 ```bash
 cd ps03
 make
+```
+
+Build PS04 storage-class and memory programs (Linux for `-no-pie`):
+
+```bash
+cd ps04
+make
+make nopie
 ```
 
 ## Reports
