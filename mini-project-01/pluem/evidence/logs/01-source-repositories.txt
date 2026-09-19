@@ -1,0 +1,23 @@
+=== CPE333 Mini-Project: Source Repository Setup ===
+Thu Sep 17 02:28:26 PM +07 2026
+
+=== Active Source Configuration ===
+Types: deb deb-src
+URIs: http://th.archive.ubuntu.com/ubuntu/
+Suites: resolute resolute-updates resolute-backports
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+Types: deb deb-src
+URIs: http://security.ubuntu.com/ubuntu/
+Suites: resolute-security
+Components: main restricted universe multiverse
+Signed-By: /usr/share/keyrings/ubuntu-archive-keyring.gpg
+
+=== Linux Source Package ===
+Package: linux
+Version: 7.0.0-14.14
+Directory: pool/main/l/linux
+Package: linux
+Version: 7.0.0-31.31
+Directory: pool/main/l/linux

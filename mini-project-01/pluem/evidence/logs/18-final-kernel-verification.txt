@@ -1,0 +1,24 @@
+=== CPE333 Mini-Project: Final Custom Kernel Verification ===
+Thu Sep 17 11:02:23 PM +07 2026
+
+=== Running Kernel ===
+7.0.0-999-generic
+
+=== Full Kernel Information ===
+Linux wisit-ubuntu-macos-Apple-Virtualization-Generic-Platform 7.0.0-999-generic #31 SMP PREEMPT_DYNAMIC Thu Sep 17 18:28:17 +07 2026 aarch64 GNU/Linux
+
+=== Installed Custom Kernel Packages ===
+ii  linux-image-unsigned-7.0.0-999-generic     7.0.0-999.31                               arm64        Linux kernel image for version 7.0.0
+ii  linux-modules-7.0.0-999-generic            7.0.0-999.31                               arm64        Linux kernel modules for version 7.0.0
+
+=== Custom Kernel Boot Files ===
+-rw------- 1 root root 8.4M Sep 17 20:52 /boot/System.map-7.0.0-999-generic
+-rw-r--r-- 1 root root 363K Sep 17 20:52 /boot/config-7.0.0-999-generic
+-rw------- 1 root root  53M Sep 17 22:47 /boot/initrd.img-7.0.0-999-generic
+-rw------- 1 root root  17M Sep 17 20:52 /boot/vmlinuz-7.0.0-999-generic
+
+=== Filesystem Status ===
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda2        62G   21G   39G  35% /
+/dev/vda2        62G   21G   39G  35% /
+/dev/vda1       1.1G  6.6M  1.1G   1% /boot/efi

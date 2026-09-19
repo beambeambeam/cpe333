@@ -1,0 +1,20 @@
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Solving dependencies...
+Installing:
+  linux-image-unsigned-7.0.0-999-generic  linux-modules-7.0.0-999-generic
+
+Suggested packages:
+  linux-tools  linux-headers-7.0.0-999-generic
+
+Summary:
+  Upgrading: 0, Installing: 2, Removing: 0, Not Upgrading: 25
+Inst linux-modules-7.0.0-999-generic (7.0.0-999.31 local-deb [arm64])
+Inst linux-image-unsigned-7.0.0-999-generic (7.0.0-999.31 local-deb [arm64])
+Conf linux-modules-7.0.0-999-generic (7.0.0-999.31 local-deb [arm64])
+Conf linux-image-unsigned-7.0.0-999-generic (7.0.0-999.31 local-deb [arm64])
