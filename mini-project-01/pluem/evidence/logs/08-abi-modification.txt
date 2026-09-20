@@ -1,0 +1,25 @@
+=== CPE333 Mini-Project: Kernel ABI Modification ===
+Thu Sep 17 03:21:58 PM +07 2026
+
+=== Source Directory ===
+/home/wisit-ubuntu-macos/cpe333-kernel-work/pluem/linux-7.0.0
+
+=== Original Version ===
+linux (7.0.0-31.31) resolute; urgency=medium
+
+=== Modified Version ===
+linux (7.0.0-999.31) resolute; urgency=medium
+
+=== Modification Diff ===
+--- debian.master/changelog.before-cpe333	2026-09-17 15:11:49.000000000 +0700
++++ debian.master/changelog	2026-09-17 15:21:31.684972823 +0700
+@@ -1,4 +1,4 @@
+-linux (7.0.0-31.31) resolute; urgency=medium
++linux (7.0.0-999.31) resolute; urgency=medium
+ 
+   * resolute/linux: 7.0.0-31.31 -proposed tracker (LP: #2162413)
+ 
+
+=== Disk Remaining ===
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda2        50G   19G   29G  40% /

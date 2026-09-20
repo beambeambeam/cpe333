@@ -1,0 +1,27 @@
+=== CPE333 Mini-Project: Kernel Source Download ===
+Thu Sep 17 03:12:43 PM +07 2026
+
+=== Running Kernel ===
+7.0.0-31-generic
+
+=== Source Package Target ===
+Binary: linux-headers-7.0.0-31, linux-tools-7.0.0-31, linux-cloud-tools-7.0.0-31, linux-libc-dev, linux-tools-common, linux-cloud-tools-common, linux-tools-host, linux-source-7.0.0, linux-doc, linux-bpf-dev, bpftool, linux-perf, linux-image-unsigned-7.0.0-31-generic, linux-image-unsigned-7.0.0-31-generic-dbgsym, linux-image-7.0.0-31-generic, linux-image-7.0.0-31-generic-dbgsym, linux-modules-7.0.0-31-generic, linux-headers-7.0.0-31-generic, linux-lib-rust-7.0.0-31-generic, linux-tools-7.0.0-31-generic, linux-cloud-tools-7.0.0-31-generic, linux-buildinfo-7.0.0-31-generic, linux-image-unsigned-7.0.0-31-generic-64k, linux-image-unsigned-7.0.0-31-generic-64k-dbgsym, linux-modules-7.0.0-31-generic-64k, linux-headers-7.0.0-31-generic-64k, linux-lib-rust-7.0.0-31-generic-64k, linux-tools-7.0.0-31-generic-64k, linux-cloud-tools-7.0.0-31-generic-64k, linux-buildinfo-7.0.0-31-generic-64k
+Version: 7.0.0-31.31
+Priority: optional
+Section: devel
+
+=== Downloaded Files ===
+total 246M
+drwxrwxr-x  2 wisit-ubuntu-macos wisit-ubuntu-macos 4.0K Sep 17 15:11 evidence
+drwxrwxr-x 29 wisit-ubuntu-macos wisit-ubuntu-macos 4.0K Sep 17 15:11 linux-7.0.0
+-rw-r--r--  1 wisit-ubuntu-macos wisit-ubuntu-macos 2.3M Aug 10 22:23 linux_7.0.0-31.31.diff.gz
+-rw-r--r--  1 wisit-ubuntu-macos wisit-ubuntu-macos 7.6K Aug 10 22:23 linux_7.0.0-31.31.dsc
+-rw-r--r--  1 wisit-ubuntu-macos wisit-ubuntu-macos 244M Apr 15 03:55 linux_7.0.0.orig.tar.gz
+
+=== Source Changelog ===
+linux (7.0.0-31.31) resolute; urgency=medium
+
+=== Source Size / Disk Usage ===
+1.7G	linux-7.0.0
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda2        50G   19G   29G  40% /

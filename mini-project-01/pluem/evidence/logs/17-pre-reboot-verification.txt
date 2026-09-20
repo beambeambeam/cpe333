@@ -1,0 +1,19 @@
+=== CPE333 Custom Kernel Installation Verification ===
+Thu Sep 17 10:51:15 PM +07 2026
+
+=== Currently Running Before Reboot ===
+7.0.0-31-generic
+
+=== Installed Custom Kernel Packages ===
+ii  linux-image-7.0.0-31-generic               7.0.0-31.31                                arm64        Signed kernel image generic
+ii  linux-image-generic-hwe-26.04              7.0.0-31.31                                arm64        Generic Linux kernel image
+ii  linux-image-unsigned-7.0.0-999-generic     7.0.0-999.31                               arm64        Linux kernel image for version 7.0.0
+ii  linux-modules-7.0.0-31-generic             7.0.0-31.31                                arm64        Linux kernel modules for version 7.0.0
+ii  linux-modules-7.0.0-999-generic            7.0.0-999.31                               arm64        Linux kernel modules for version 7.0.0
+
+=== Custom Kernel Boot Files ===
+-rw------- 1 root root 53M Sep 17 22:47 /boot/initrd.img-7.0.0-999-generic
+-rw------- 1 root root 17M Sep 17 20:52 /boot/vmlinuz-7.0.0-999-generic
+
+=== GRUB Custom Kernel Entry ===
+	menuentry 'Ubuntu, with Linux 7.0.0-999-generic' --class ubuntu --class gnu-linux --class gnu --class os $menuentry_id_option 'gnulinux-7.0.0-999-generic-advanced-80417bb8-aae9-42ef-84a9-e61fdbaa0680' {

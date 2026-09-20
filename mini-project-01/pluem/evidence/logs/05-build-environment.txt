@@ -1,0 +1,21 @@
+=== CPE333 Mini-Project: Build Environment ===
+Thu Sep 17 02:49:19 PM +07 2026
+
+=== Running Kernel ===
+7.0.0-31-generic
+aarch64
+
+=== Compiler / Build Tools ===
+gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0
+GNU Make 4.4.1
+21.1.8
+v1.31
+
+=== Resources After Dependency Installation ===
+               total        used        free      shared  buff/cache   available
+Mem:           7.2Gi       3.8Gi       314Mi       226Mi       3.6Gi       3.5Gi
+Swap:          4.0Gi        86Mi       3.9Gi
+NAME      TYPE SIZE  USED PRIO
+/swap.img file   4G 86.3M   -1
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda2        50G   17G   31G  36% /

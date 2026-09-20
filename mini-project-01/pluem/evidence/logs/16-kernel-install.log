@@ -1,0 +1,55 @@
+
+WARNING: apt does not have a stable CLI interface. Use with caution in scripts.
+
+Reading package lists...
+Building dependency tree...
+Reading state information...
+Solving dependencies...
+Installing:
+  linux-image-unsigned-7.0.0-999-generic  linux-modules-7.0.0-999-generic
+
+Suggested packages:
+  linux-tools  linux-headers-7.0.0-999-generic
+
+Summary:
+  Upgrading: 0, Installing: 2, Removing: 0, Not Upgrading: 25
+  Download size: 0 B / 183 MB
+  Space needed: 300 MB / 41.6 GB available
+
+Get:1 /home/wisit-ubuntu-macos/cpe333-kernel-work/pluem/lab-adjusted/linux-modules-7.0.0-999-generic_7.0.0-999.31_cpe333lab_arm64.deb linux-modules-7.0.0-999-generic arm64 7.0.0-999.31 [165 MB]
+Get:2 /home/wisit-ubuntu-macos/cpe333-kernel-work/pluem/packages/linux-image-unsigned-7.0.0-999-generic_7.0.0-999.31_arm64.deb linux-image-unsigned-7.0.0-999-generic arm64 7.0.0-999.31 [17.8 MB]
+Selecting previously unselected package linux-modules-7.0.0-999-generic.
+(Reading database… (Reading database… 5%(Reading database… 10%(Reading database… 15%(Reading database… 20%(Reading database… 25%(Reading database… 30%(Reading database… 35%(Reading database… 40%(Reading database… 45%(Reading database… 50%(Reading database… 55%(Reading database… 60%(Reading database… 65%(Reading database… 70%(Reading database… 75%(Reading database… 80%(Reading database… 85%(Reading database… 90%(Reading database… 95%(Reading database… 100%(Reading database… 208414 files and directories currently installed.)
+Preparing to unpack …/linux-modules-7.0.0-999-generic_7.0.0-999.31_cpe333lab_arm64.deb…
+Unpacking linux-modules-7.0.0-999-generic (7.0.0-999.31)…
+Selecting previously unselected package linux-image-unsigned-7.0.0-999-generic.
+Preparing to unpack …/linux-image-unsigned-7.0.0-999-generic_7.0.0-999.31_arm64.deb…
+Unpacking linux-image-unsigned-7.0.0-999-generic (7.0.0-999.31)…
+Setting up linux-modules-7.0.0-999-generic (7.0.0-999.31)…
+Setting up linux-image-unsigned-7.0.0-999-generic (7.0.0-999.31)…
+I: /boot/vmlinuz is now a symlink to vmlinuz-7.0.0-999-generic
+I: /boot/initrd.img is now a symlink to initrd.img-7.0.0-999-generic
+Processing triggers for linux-image-unsigned-7.0.0-999-generic (7.0.0-999.31)…
+/etc/kernel/postinst.d/dkms:
+Automatic installation of modules for kernel 7.0.0-999-generic was skipped since the kernel headers for this kernel do not seem to be installed.
+/etc/kernel/postinst.d/dracut:
+dracut: Generating /boot/initrd.img-7.0.0-999-generic
+/etc/kernel/postinst.d/kdump-tools:
+kdump-tools: Generating /var/lib/kdump/initrd.img-7.0.0-999-generic
+/etc/kernel/postinst.d/zz-flash-kernel:
+flash-kernel: deferring update (trigger activated)
+/etc/kernel/postinst.d/zz-update-grub:
+Sourcing file `/etc/default/grub'
+Sourcing file `/etc/default/grub.d/kdump-tools.cfg'
+Generating grub configuration file ...
+Found linux image: /boot/vmlinuz-7.0.0-999-generic
+Found initrd image: /boot/initrd.img-7.0.0-999-generic
+Found linux image: /boot/vmlinuz-7.0.0-31-generic
+Found initrd image: /boot/initrd.img-7.0.0-31-generic
+Warning: os-prober will not be executed to detect other bootable partitions.
+Systems on them will not be added to the GRUB boot configuration.
+Check GRUB_DISABLE_OS_PROBER documentation entry.
+Adding boot menu entry for UEFI Firmware Settings ...
+done
+Processing triggers for flash-kernel (3.110ubuntu2.3)…
+System running in EFI mode, skipping.

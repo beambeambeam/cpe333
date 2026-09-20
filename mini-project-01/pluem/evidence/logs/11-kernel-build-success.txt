@@ -1,0 +1,17 @@
+=== CPE333 Mini-Project: Successful Kernel Build ===
+Thu Sep 17 09:28:41 PM +07 2026
+
+=== Custom Kernel Version ===
+linux (7.0.0-999.31) resolute; urgency=medium
+
+=== Generated Packages ===
+-rw-r--r-- 1 wisit-ubuntu-macos wisit-ubuntu-macos 994K Sep 17 21:02 linux-bpf-dev_7.0.0-999.31_arm64.deb
+-rw-r--r-- 1 wisit-ubuntu-macos wisit-ubuntu-macos 734K Sep 17 21:02 linux-buildinfo-7.0.0-999-generic_7.0.0-999.31_arm64.deb
+-rw-r--r-- 1 wisit-ubuntu-macos wisit-ubuntu-macos  41M Sep 17 21:02 linux-headers-7.0.0-999-generic_7.0.0-999.31_arm64.deb
+-rw-r--r-- 1 wisit-ubuntu-macos wisit-ubuntu-macos  17M Sep 17 20:59 linux-image-unsigned-7.0.0-999-generic_7.0.0-999.31_arm64.deb
+-rw-r--r-- 1 wisit-ubuntu-macos wisit-ubuntu-macos 273M Sep 17 21:02 linux-modules-7.0.0-999-generic_7.0.0-999.31_arm64.deb
+-rw-r--r-- 1 wisit-ubuntu-macos wisit-ubuntu-macos 225K Sep 17 21:02 linux-tools-7.0.0-999-generic_7.0.0-999.31_arm64.deb
+
+=== Disk After Build ===
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/vda2        62G   56G  3.1G  95% /

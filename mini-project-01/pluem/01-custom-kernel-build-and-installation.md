@@ -1,3 +1,18 @@
+---
+title: Building and installing a custom Ubuntu Linux kernel
+status: completed
+research_date: 2026-09-17
+tags:
+  - mini-project-01
+  - Ubuntu-26.04.1
+  - ARM64
+  - Linux-kernel
+  - kernel-build
+  - kernel-installation
+  - kernel-verification
+  - evidence
+---
+
 # CPE333 Mini-Project 01: Building and Installing a Custom Ubuntu Linux Kernel
 
 ## 1. Objective
@@ -6,9 +21,20 @@ The objective of this mini-project was to compile and install a custom Ubuntu Li
 
 This report follows the procedure in [`problem-statements.md`](../problem-statements.md) and [`how-to-build-an-ubuntu-linux-kernel.md`](../how-to-build-an-ubuntu-linux-kernel.md). The commands, versions, package names, and results below are taken from the actual experiment and its evidence files.
 
+| Result | Verified value |
+| --- | --- |
+| Source package | `linux 7.0.0-31.31` |
+| Original running kernel | `7.0.0-31-generic` |
+| Custom ABI and flavour | `7.0.0-999-generic` |
+| Build target | `binary-generic` |
+| Architecture | `arm64` / `aarch64` |
+| Build result | Exit code `0` |
+| Installed custom packages | Image and lab-adjusted modules package |
+| Final boot proof | `uname -r` returned `7.0.0-999-generic` |
+
 ## 2. Repository and report context
 
-The work was performed from the fork `Palapluem/cpe333`, with `beambeambeam/cpe333` configured as the upstream repository. The working branch was:
+The experiment and the original report were prepared from the fork `Palapluem/cpe333`, with `beambeambeam/cpe333` configured as the upstream repository. The working branch was:
 
 ```text
 pluem/mini-project-01
@@ -34,11 +60,7 @@ The experiment was performed in an Ubuntu virtual machine running in UTM on an A
 
 The initial build environment evidence showed approximately 29–31 GB free on `/` after installing the dependencies. The source tree itself occupied approximately 1.7 GB before compilation.
 
-**Figure 1. Build environment and available resources.**
-
-`[Screenshot not supplied in the ZIP: 02_build_environment_ready.png]`
-
-The terminal evidence for this section is `05-build-environment.txt` in `~/cpe333-kernel-work/pluem/evidence/`.
+> **Evidence note:** The separate build-environment screenshot named `02_build_environment_ready.png` was not present in the supplied ZIP. The original terminal snapshot is included as [`05-build-environment.txt`](evidence/logs/05-build-environment.txt); no replacement screenshot was fabricated.
 
 ## 4. Enabling source repositories and installing dependencies
 
@@ -60,18 +82,18 @@ sudo apt install -y fakeroot llvm libncurses-dev dwarves
 
 The dependency installation also provided the required ARM64 build toolchain. The installed tools included GCC `15.2.0`, GNU Make `4.4.1`, LLVM `21.1.8`, and `dwarves` `1.31`.
 
-**Figure 2. Source repositories enabled.**
+**Figure 1. Source repositories enabled.**
 
-![Figure 2. Source repositories enabled.](evidence/screenshots/01-source-repositories-enabled.png)
+![Figure 1. Source repositories enabled.](evidence/screenshots/01-source-repositories-enabled.png)
 
 Evidence files:
 
-- `01-source-repositories.txt`
-- `02-build-dep-dry-run.txt`
-- `03-build-dependencies.log`
-- `04-extra-build-tools.log`
+- [`01-source-repositories.txt`](evidence/logs/01-source-repositories.txt)
+- [`02-build-dep-dry-run.txt`](evidence/logs/02-build-dep-dry-run.txt)
+- [`03-build-dependencies.log`](evidence/logs/03-build-dependencies.log)
+- [`04-extra-build-tools.log`](evidence/logs/04-extra-build-tools.log)
 
-All four files are under `~/cpe333-kernel-work/pluem/evidence/`.
+These files are exact copies of the evidence captured in the experiment workspace.
 
 ## 5. Obtaining and preparing the kernel source
 
@@ -101,19 +123,19 @@ fakeroot debian/rules clean
 
 The cleanup was completed before the first compilation attempt.
 
-**Figure 3a. Kernel source workspace after the source download.**
+**Figure 2a. Kernel source workspace after the source download.**
 
-![Figure 3a. Kernel source workspace after the source download.](evidence/screenshots/02-kernel-source-download.png)
+![Figure 2a. Kernel source workspace after the source download.](evidence/screenshots/02-kernel-source-download.png)
 
-**Figure 3b. Source package target, original changelog, and source-tree size.**
+**Figure 2b. Source package target, original changelog, and source-tree size.**
 
-![Figure 3b. Source package target, original changelog, and source-tree size.](evidence/screenshots/03-kernel-source-ready.png)
+![Figure 2b. Source package target, original changelog, and source-tree size.](evidence/screenshots/03-kernel-source-ready.png)
 
 Evidence files:
 
-- `06-kernel-source-download.log`
-- `07-kernel-source-ready.txt`
-- `09-kernel-clean.log`
+- [`06-kernel-source-download.log`](evidence/logs/06-kernel-source-download.log)
+- [`07-kernel-source-ready.txt`](evidence/logs/07-kernel-source-ready.txt)
+- [`09-kernel-clean.log`](evidence/logs/09-kernel-clean.log)
 
 ## 6. Changing the kernel ABI
 
@@ -126,11 +148,11 @@ Modified:  linux (7.0.0-999.31) resolute; urgency=medium
 
 No other changelog entry was changed. The original changelog was preserved in the evidence workspace as `changelog.before-cpe333`.
 
-**Figure 4. Kernel ABI changed from `31` to `999`.**
+**Figure 3. Kernel ABI changed from `31` to `999`.**
 
-![Figure 4. Kernel ABI changed from `31` to `999`.](evidence/screenshots/04-kernel-abi-999.png)
+![Figure 3. Kernel ABI changed from `31` to `999`.](evidence/screenshots/04-kernel-abi-999.png)
 
-The exact one-line diff is recorded in `08-abi-modification.txt`.
+The exact one-line diff is recorded in [`08-abi-modification.txt`](evidence/logs/08-abi-modification.txt).
 
 ## 7. Selecting the build target and compiling the kernel
 
@@ -177,19 +199,19 @@ CONCURRENCY_LEVEL=2 fakeroot debian/rules binary-generic
 
 The resumed output was appended to the existing build log. The resumed build completed successfully with exit code `0`.
 
-**Figure 5a. Kernel compilation in progress.**
+**Figure 4a. Kernel compilation in progress.**
 
-![Figure 5a. Kernel compilation in progress.](evidence/screenshots/05-kernel-compilation-progress-01.png)
+![Figure 4a. Kernel compilation in progress.](evidence/screenshots/05-kernel-compilation-progress-01.png)
 
-**Figure 5b. Continued compilation with the build-resource monitor.**
+**Figure 4b. Continued compilation with the build-resource monitor.**
 
-![Figure 5b. Continued compilation with the build-resource monitor.](evidence/screenshots/06-kernel-compilation-progress-02.png)
+![Figure 4b. Continued compilation with the build-resource monitor.](evidence/screenshots/06-kernel-compilation-progress-02.png)
 
 The second compilation capture contains transient `libfakeroot internal error: payload not recognized!` messages from the live build output. They did not prevent the resumed build from completing: the authoritative build result was exit code `0` and the expected packages were generated.
 
-**Figure 6. Successful `binary-generic` build.**
+**Figure 5. Successful `binary-generic` build.**
 
-![Figure 6. Successful `binary-generic` build.](evidence/screenshots/07-kernel-build-success.png)
+![Figure 5. Successful `binary-generic` build.](evidence/screenshots/07-kernel-build-success.png)
 
 After the successful build, the build tree was cleaned and APT's local cache was cleared:
 
@@ -224,7 +246,7 @@ fca91dcc0f01d81e0e3a4dd48653dcc98022f5edc3ea903850e096443d1e460c  linux-modules-
 b26b1199f5abcd2817a23dc3e6ccf83a87e8b98d4a8d51d09e6e842ce9ccfe3f  linux-tools-7.0.0-999-generic_7.0.0-999.31_arm64.deb
 ```
 
-These values are also recorded in `13-package-sha256.txt`.
+These values are also recorded in [`13-package-sha256.txt`](evidence/logs/13-package-sha256.txt).
 
 ## 9. Package dependency issue and controlled lab adjustment
 
@@ -284,6 +306,8 @@ c99e48259957d8ff429d67bf5ce41b35fd1789171d23d364f75447ee60106dea
 
 This was a lab-specific package metadata workaround. It was not part of the original kernel compilation output, and it does not represent a claim that ZFS was compiled, installed, or used. The original build artifact and its hash were retained for comparison and reproducibility.
 
+The preserved packages were checked again during report QA. Their relevant metadata is recorded side by side in [`19-modules-package-metadata-verification.txt`](evidence/logs/19-modules-package-metadata-verification.txt).
+
 The generated headers package also depended on the missing base package `linux-headers-7.0.0-999`. The headers package was therefore not fully installed for this boot test. It was retained as a generated build artifact, but it was not represented as an installed dependency in the final verification.
 
 ## 10. Installing the custom kernel
@@ -309,16 +333,16 @@ During installation:
 
 The DKMS post-install hook reported that automatic module installation was skipped because the headers for `7.0.0-999-generic` did not appear to be installed. This warning did not block installation or boot; the kernel image and the custom kernel modules package were installed successfully for this test.
 
-**Figure 7. Custom kernel package installation and boot files.**
+**Figure 6. Custom kernel package installation and boot files.**
 
-![Figure 7. Custom kernel package installation and boot files.](evidence/screenshots/08-pre-reboot-installation-verification.png)
+![Figure 6. Custom kernel package installation and boot files.](evidence/screenshots/08-pre-reboot-installation-verification.png)
 
 Evidence files:
 
-- `14-modules-package-adjustment-sha256.txt`
-- `15-kernel-install-dry-run.log`
-- `16-kernel-install.log`
-- `17-pre-reboot-verification.txt`
+- [`14-modules-package-adjustment-sha256.txt`](evidence/logs/14-modules-package-adjustment-sha256.txt)
+- [`15-kernel-install-dry-run.log`](evidence/logs/15-kernel-install-dry-run.log)
+- [`16-kernel-install.log`](evidence/logs/16-kernel-install.log)
+- [`17-pre-reboot-verification.txt`](evidence/logs/17-pre-reboot-verification.txt)
 
 ## 11. Reboot and final verification
 
@@ -360,30 +384,46 @@ The boot files were present:
 
 The final filesystem status was approximately 62 GB total, 21 GB used, and 39 GB free on `/`. The EFI partition was mounted at `/boot/efi` with approximately 1.1 GB free.
 
-**Figure 8. Custom kernel running after reboot.**
+**Figure 7. Custom kernel running after reboot.**
 
-![Figure 8. Custom kernel running after reboot.](evidence/screenshots/09-kernel-boot-verification.png)
+![Figure 7. Custom kernel running after reboot.](evidence/screenshots/09-kernel-boot-verification.png)
 
-The final proof of a successful compile, installation, and boot is recorded in `18-final-kernel-verification.txt`:
+The final proof of a successful compile, installation, and boot is recorded in [`18-final-kernel-verification.txt`](evidence/logs/18-final-kernel-verification.txt):
 
 ```text
 Running Kernel:
 7.0.0-999-generic
 ```
 
-**Figure 9. Final filesystem and EFI-partition verification.**
+**Figure 8. Final filesystem and EFI-partition verification.**
 
-![Figure 9. Final filesystem and EFI-partition verification.](evidence/screenshots/10-final-filesystem-verification.png)
+![Figure 8. Final filesystem and EFI-partition verification.](evidence/screenshots/10-final-filesystem-verification.png)
 
-## 12. Evidence index and screenshot inventory
+## 12. Differences from the reference guide
 
-The terminal evidence was retained outside the Git repository at:
+The repository guide describes the general Ubuntu procedure. The following experiment-specific differences are intentional and are supported by the evidence:
+
+| Topic | Reference procedure | Procedure used in this experiment | Reason |
+| --- | --- | --- | --- |
+| Build target | `fakeroot debian/rules binary` | `CONCURRENCY_LEVEL=2 fakeroot debian/rules binary-generic` | The ARM64 package defined both `generic` and `generic-64k`; only the required `generic` flavour was built, with concurrency limited for the VM. |
+| Interrupted build | Clean before rebuilding | Resume the same target without `clean` after expanding the disk | The interruption was deliberate, the build tree remained intact, and no source or configuration change was made. |
+| Modules package | Install the generated package directly | Preserve the original package and install a separately marked lab-adjusted copy | The generated package required an unavailable custom-ABI ZFS package even though this ext4 VM did not use ZFS. |
+| Headers | Install generated headers | Do not claim or perform a complete headers installation | The flavour headers depended on the missing base package `linux-headers-7.0.0-999`; the boot test required only the image and modules packages. |
+| DKMS | Normally rebuild external modules when headers are available | Record the skipped-module warning | The missing custom headers caused DKMS to skip automatic modules, but did not prevent package installation or boot. |
+
+The original `linux-modules` package was not modified in place, ZFS was not used, and the report does not describe the adjusted package as an original build artifact.
+
+## 13. Evidence index and screenshot inventory
+
+The original terminal evidence remains at:
 
 ```text
 ~/cpe333-kernel-work/pluem/evidence/
 ```
 
-Relevant files are:
+Reviewer-readable copies are included in [`evidence/logs/`](evidence/logs/). The directory contains files `01` through `09`, `11` through `18`, and the read-only metadata comparison in file `19`. The full `10-kernel-build-generic.log` is retained only in the experiment workspace because it is approximately 7.8 MB; the repository includes its concise success record, [`11-kernel-build-success.txt`](evidence/logs/11-kernel-build-success.txt), together with the build screenshots, generated-package hashes, and final installation evidence.
+
+The complete original evidence inventory is:
 
 ```text
 01-source-repositories.txt
@@ -406,7 +446,7 @@ Relevant files are:
 18-final-kernel-verification.txt
 ```
 
-The original built packages are under `~/cpe333-kernel-work/pluem/packages/`. The lab-adjusted modules package is under `~/cpe333-kernel-work/pluem/lab-adjusted/`.
+The original built packages remain under `~/cpe333-kernel-work/pluem/packages/`. The lab-adjusted modules package remains under `~/cpe333-kernel-work/pluem/lab-adjusted/`. The large `.deb` artifacts are not committed to this coursework repository; their recorded SHA256 values allow the original and adjusted modules packages to be distinguished.
 
 The supplied screenshots are now stored in the repository at:
 
@@ -416,9 +456,9 @@ mini-project-01/pluem/evidence/screenshots/
 
 The directory contains ten renamed screenshots covering source setup, source preparation, ABI modification, compilation, package generation, installation verification, boot verification, and final filesystem verification. The original capture names and their new report names are mapped in `evidence/screenshots/README.md`.
 
-The only planned screenshot that was not included in the supplied ZIP is the separate build-environment capture, represented by the explicit Figure 1 placeholder above. No screenshot path or image content has been invented.
+The only planned screenshot that was not included in the supplied ZIP is the separate build-environment capture. Its absence is stated in Section 3 and is covered by the included text evidence. No screenshot path or image content has been invented.
 
-## 13. Conclusion
+## 14. Conclusion
 
 The Ubuntu `7.0.0-31.31` source package was prepared on an ARM64 Ubuntu 26.04.1 LTS VM, its ABI was changed to `999`, and the `generic` kernel flavour was built with the `binary-generic` target using two concurrent jobs. The build survived a controlled disk-space interruption, resumed without cleaning, and completed successfully after the virtual disk was expanded.
 

@@ -1,0 +1,15 @@
+=== Original compiled modules package ===
+Package: linux-modules-7.0.0-999-generic
+Version: 7.0.0-999.31
+Architecture: arm64
+Depends: linux-main-modules-zfs-7.0.0-999-generic, wireless-regdb
+
+=== Lab-adjusted installation copy ===
+Package: linux-modules-7.0.0-999-generic
+Version: 7.0.0-999.31
+Architecture: arm64
+Depends: wireless-regdb
+X-CPE333-Lab-Adjustment: removed unavailable custom-ABI ZFS dependency
+
+=== Verification method ===
+The fields above were read directly from the preserved package files with dpkg-deb -f during the report QA pass. No package content was changed during this verification.

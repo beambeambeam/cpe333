@@ -1,0 +1,40 @@
+for cert in canonical-uefi-2012-all.pem canonical-uefi-2017-all.pem canonical-uefi-2018-all.pem canonical-uefi-2019-all.pem canonical-uefi-2021v1-all.pem canonical-uefi-2021v2-all.pem canonical-uefi-2021v3-all.pem canonical-uefi-uc2019-all.pem;					\
+do									\
+	for dir in debian.master debian;					\
+	do								\
+		if [ -f "$dir/revoked-certs/$cert" ]; then		\
+			cat "$dir/revoked-certs/$cert";		\
+			break;						\
+		fi;							\
+	done;								\
+done >"debian/canonical-revoked-certs.pem"
+for cert in canonical-livepatch-2025-all.pem canonical-livepatch-all.pem ubuntu-drivers-2025-all.pem ubuntu-drivers-all.pem;					\
+do									\
+	for dir in debian.master debian;					\
+	do								\
+		if [ -f "$dir/certs/$cert" ]; then			\
+			cat "$dir/certs/$cert";			\
+			break;						\
+		fi;							\
+	done;								\
+done >"debian/canonical-certs.pem"
+/bin/bash -e debian/scripts/control-create linux > debian/control
+sed -i -e 's/PKGVER/7.0.0/g'                          \
+        -e 's/ABINUM/999/g'                                       \
+	-e 's/SRCPKGNAME/linux/g'                               \
+	-e 's/=SERIES=/resolute/g'                           \
+	-e 's|\(^Maintainer:.*\)|\1\nXSC-Ubuntu-Compatible-Signing: ubuntu/4 pro/3 livepatch:2025 kmod:2025|g' \
+	-e 's/\(^Build-Depends:$\)/\1\n\ gcc:native, gcc-aarch64-linux-gnu [arm64] <cross>, gcc-arm-linux-gnueabihf [armhf] <cross>, gcc-powerpc64le-linux-gnu [ppc64el] <cross>, gcc-riscv64-linux-gnu [riscv64] <cross>, gcc-s390x-linux-gnu [s390x] <cross>, gcc-x86-64-linux-gnu [amd64] <cross>,/g'         \
+debian/control
+dh_testdir
+dh_testroot
+dh_clean
+# normal build junk
+rm -rf debian.master/abi
+rm -rf /home/wisit-ubuntu-macos/cpe333-kernel-work/pluem/linux-7.0.0/debian/build /home/wisit-ubuntu-macos/cpe333-kernel-work/pluem/linux-7.0.0/debian/stamps
+rm -rf debian/linux-*/
+rm -rf debian/tmp-headers
+cp debian.master/changelog debian/changelog
+# If we have a reconstruct script use it.
+[ -f debian.master/reconstruct ] && bash debian.master/reconstruct || true
+rm -f debian/scripts/fix-filenames
