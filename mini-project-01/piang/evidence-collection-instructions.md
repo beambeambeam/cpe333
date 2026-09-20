@@ -77,10 +77,35 @@ grep -RInE '^(Types:|URIs:|Suites:|Components:)' \
   /etc/apt/sources.list /etc/apt/sources.list.d 2>/dev/null
 echo '=== Package update and dependencies ==='
 sudo apt update
+sudo apt build-dep -y linux "linux-image-unsigned-$(uname -r)"
 sudo apt install -y fakeroot llvm libncurses-dev dwarves
 ```
 
-The relevant configuration must show source packages, such as `deb-src` or `Types: deb deb-src`.
+The relevant configuration must show source packages, such as `deb-src` or
+`Types: deb deb-src`. For an Ubuntu deb822 source file, inspect the active file
+before running `apt update`:
+
+```bash
+grep -nE '^(Types:|URIs:|Suites:|Components:)' \
+  /etc/apt/sources.list.d/ubuntu.sources
+```
+
+If the active file shows only `Types: deb`, enable source packages and update
+the package indexes before retrying the dependency commands:
+
+```bash
+sudo sed -i 's/^Types: deb$/Types: deb deb-src/' \
+  /etc/apt/sources.list.d/ubuntu.sources
+grep -nE '^(Types:|URIs:|Suites:|Components:)' \
+  /etc/apt/sources.list.d/ubuntu.sources
+sudo apt update
+```
+
+Edit the active `ubuntu.sources` file, not a backup such as
+`ubuntu.sources.curtin.orig`. If `apt build-dep` or `apt source` reports
+`You must put some 'deb-src' URIs in your sources.list`, preserve that failure
+as optional evidence and capture the corrected configuration and successful
+retry separately.
 
 ### 03 — Kernel source ready
 
@@ -138,8 +163,15 @@ Show the QEMU guest actively compiling the kernel:
 
 ```bash
 cd ~/kernel-work/linux-<actual-version>
+fakeroot debian/rules clean
 CONCURRENCY_LEVEL=2 fakeroot debian/rules binary
 ```
+
+Run `fakeroot debian/rules clean` after changing the ABI so the generated
+package metadata is rebuilt with ABI `999`. If a previous build stops with an
+`unknown package linux-headers-<version>-999` error while the expected package
+list still contains ABI `31`, keep that real failure as optional recovery
+evidence, run the clean step, and retry the build.
 
 If compilation takes several screens, use `05-kernel-build-progress-02.png`, `05-kernel-build-progress-03.png`, and so on.
 
@@ -230,6 +262,8 @@ Keep real problems visible and describe their recovery in the report. Examples:
 ```text
 05a-build-failed-disk-space.png
 05b-disk-space-recovered.png
+05c-build-packaging-error.png
+02a-source-repositories-error.png
 07a-installation-error.png
 ```
 
