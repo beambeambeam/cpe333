@@ -38,14 +38,14 @@ Nothing in this guide has been run for the report. Replace every placeholder in
 
 ## 1. Choose the platforms
 
-| Platform | Use it for | Notes |
-|---|---|---|
-| Debian/Ubuntu | All Linux sections | Recommended |
-| WSL2 Ubuntu | Linux commands and swap experiment | GUI evidence needs WSLg or a Linux VM |
-| Fedora/Arch | All Linux sections | Use the package commands below |
-| Linux desktop VM | All Linux evidence | Safest option for screenshots |
-| Windows | Windows Resource Monitor section | Physical Windows or a Windows VM |
-| macOS | Preparation only | `vm_stat` is not a replacement for `free`/`vmstat` or Resource Monitor |
+| Platform         | Use it for                         | Notes                                                                        |
+| ---------------- | ---------------------------------- | ---------------------------------------------------------------------------- |
+| Debian/Ubuntu    | All Linux sections                 | Recommended                                                                  |
+| WSL2 Ubuntu      | Linux commands and swap experiment | GUI evidence needs WSLg or a Linux VM                                        |
+| Fedora/Arch      | All Linux sections                 | Use the package commands below                                               |
+| Linux desktop VM | All Linux evidence                 | Safest option for screenshots                                                |
+| Windows          | Windows Resource Monitor section   | Physical Windows or a Windows VM                                             |
+| macOS            | Preparation only                   | `vm_stat` is not a replacement for `free`/`vmstat` or Resource Monitor |
 
 The report must identify which operating system produced each screenshot. Do
 not combine Linux values from one machine with Windows values from another
@@ -422,14 +422,14 @@ $RESULTS_DIR/07_vmstat.png
 Use the headings printed by the local command. A standard Linux procps output
 has these groups:
 
-| Group | Common columns | What to explain |
-|---|---|---|
-| `procs` | `r`, `b` | Runnable processes and processes blocked in uninterruptible sleep |
-| `memory` | `swpd`, `free`, `buff`, `cache` | Virtual memory used for swap, free memory, buffers, and cache |
-| `swap` | `si`, `so` | Memory swapped in from and out to disk during the interval |
-| `io` | `bi`, `bo` | Blocks received from and sent to block devices |
-| `system` | `in`, `cs` | Interrupts and context switches per second |
-| `cpu` | `us`, `sy`, `id`, `wa`, `st` | User time, kernel time, idle time, I/O wait, and stolen time |
+| Group      | Common columns                          | What to explain                                                   |
+| ---------- | --------------------------------------- | ----------------------------------------------------------------- |
+| `procs`  | `r`, `b`                            | Runnable processes and processes blocked in uninterruptible sleep |
+| `memory` | `swpd`, `free`, `buff`, `cache` | Virtual memory used for swap, free memory, buffers, and cache     |
+| `swap`   | `si`, `so`                          | Memory swapped in from and out to disk during the interval        |
+| `io`     | `bi`, `bo`                          | Blocks received from and sent to block devices                    |
+| `system` | `in`, `cs`                          | Interrupts and context switches per second                        |
+| `cpu`    | `us`, `sy`, `id`, `wa`, `st`  | User time, kernel time, idle time, I/O wait, and stolen time      |
 
 Some options or versions add `inact` and `active`, change memory-unit display,
 or show extra CPU columns. Explain every extra heading actually shown rather
