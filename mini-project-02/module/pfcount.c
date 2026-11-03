@@ -35,7 +35,10 @@
 #include <linux/proc_fs.h>
 #include <linux/sched/mm.h>
 #include <linux/sched/signal.h>
+#include <linux/rcupdate.h>
+#include <linux/refcount.h>
 #include <linux/seq_file.h>
+#include <linux/slab.h>
 #include <linux/uaccess.h>
 
 MODULE_LICENSE("GPL");
@@ -50,66 +53,104 @@ static bool follow;
 module_param(follow, bool, 0644);
 MODULE_PARM_DESC(follow, "Also count faults of the target's descendants");
 
-/* Target state. target_pid is protected by target_lock. */
-static DEFINE_MUTEX(target_lock);
-static struct pid *target_pid;
-static pid_t target_tgid;	/* read locklessly by the probe */
-static u64 target_since_ns;
+/*
+ * A session is one monitoring period of one target. set_target() replaces
+ * the session; it never resets counters in place. A fault accepted by the
+ * entry handler holds a reference to its session until the return handler
+ * runs, so a fault that started under session A is counted in A even if B
+ * was selected in between.
+ */
+struct pf_session {
+	struct rcu_head rcu;
+	refcount_t ref;
+	struct pid *pid;		/* the selected process */
+	pid_t tgid;
+	u64 since_ns;
+	atomic64_t minor, major, anon, file, error;
+	/* Snapshot taken by the do_exit() probe. */
+	bool exit_valid;
+	int exit_regions;
+	unsigned long exit_vm, exit_peak_vm;	/* pages */
+};
 
-static atomic64_t live_minor, live_major, live_anon, live_file, live_error;
-
-/* Snapshot taken by the do_exit() probe. */
-static bool exit_valid;
-static int exit_regions;
-static unsigned long exit_vm, exit_peak_vm;	/* pages */
+static DEFINE_MUTEX(target_lock);		/* serializes set_target() */
+static struct pf_session __rcu *cur_session;
 
 static struct proc_dir_entry *pf_dir;
+
+static void session_free_rcu(struct rcu_head *head)
+{
+	struct pf_session *s = container_of(head, struct pf_session, rcu);
+
+	put_pid(s->pid);
+	kfree(s);
+}
+
+static void session_put(struct pf_session *s)
+{
+	if (s && refcount_dec_and_test(&s->ref))
+		call_rcu(&s->rcu, session_free_rcu);
+}
+
+/* Returns a referenced current session or NULL. */
+static struct pf_session *session_get(void)
+{
+	struct pf_session *s;
+
+	rcu_read_lock();
+	s = rcu_dereference(cur_session);
+	if (s && !refcount_inc_not_zero(&s->ref))
+		s = NULL;
+	rcu_read_unlock();
+	return s;
+}
 
 /* ---------- live fault counting ---------- */
 
 struct fault_ctx {
+	struct pf_session *sess;
 	unsigned int flags;
 	bool file;
 };
 
-/* True if current belongs to the target, or descends from it in follow mode. */
+/* True if current belongs to the target, or descends from it in follow mode.
+ * Caller holds rcu_read_lock(). */
 static bool is_tracked(pid_t tgid)
 {
 	struct task_struct *t;
-	bool found = false;
 	int depth = 0;
 
-	if (!tgid)
-		return false;
 	if (current->tgid == tgid)
 		return true;
 	if (!READ_ONCE(follow))
 		return false;
 
-	rcu_read_lock();
 	for (t = current; t->pid > 1 && depth < 64; depth++) {
 		t = rcu_dereference(t->real_parent);
-		if (t->tgid == tgid) {
-			found = true;
-			break;
-		}
+		if (t->tgid == tgid)
+			return true;
 	}
-	rcu_read_unlock();
-	return found;
+	return false;
 }
 
 /* handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
  *                 unsigned int flags, struct pt_regs *regs) */
 static int fault_entry(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
-	pid_t tgid = READ_ONCE(target_tgid);
 	struct fault_ctx *ctx = (struct fault_ctx *)ri->data;
 	struct vm_area_struct *vma;
+	struct pf_session *s;
 
-	if (!is_tracked(tgid))
+	rcu_read_lock();
+	s = rcu_dereference(cur_session);
+	if (!s || !is_tracked(s->tgid) || !refcount_inc_not_zero(&s->ref)) {
+		rcu_read_unlock();
 		return 1; /* not our process: skip the return handler */
+	}
+	rcu_read_unlock();
 
 	vma = (struct vm_area_struct *)regs_get_kernel_argument(regs, 0);
+	ctx->sess = s;
 	ctx->flags = (unsigned int)regs_get_kernel_argument(regs, 2);
 	ctx->file = vma && vma->vm_file;
 	return 0;
@@ -118,23 +159,28 @@ static int fault_entry(struct kretprobe_instance *ri, struct pt_regs *regs)
 static int fault_return(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
 	struct fault_ctx *ctx = (struct fault_ctx *)ri->data;
+	struct pf_session *s = ctx->sess;
 	vm_fault_t ret = (vm_fault_t)regs_return_value(regs);
 
 	/* A retried fault is handled again and counted on the final attempt. */
 	if (ret & VM_FAULT_RETRY)
-		return 0;
+		goto out;
 	if (ret & VM_FAULT_ERROR) {
-		atomic64_inc(&live_error);
-		return 0;
+		atomic64_inc(&s->error);
+		goto out;
 	}
 	if ((ret & VM_FAULT_MAJOR) || (ctx->flags & FAULT_FLAG_TRIED))
-		atomic64_inc(&live_major);
+		atomic64_inc(&s->major);
 	else
-		atomic64_inc(&live_minor);
-	atomic64_inc(ctx->file ? &live_file : &live_anon);
+		atomic64_inc(&s->minor);
+	atomic64_inc(ctx->file ? &s->file : &s->anon);
+out:
+	session_put(s);
 	return 0;
 }
 
+/* An instance still in flight at unregister time never reaches
+ * fault_return(), so its session reference leaks at module unload. */
 static struct kretprobe fault_probe = {
 	.kp.symbol_name	= "handle_mm_fault",
 	.entry_handler	= fault_entry,
@@ -148,17 +194,18 @@ static struct kretprobe fault_probe = {
 static int exit_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct mm_struct *mm = current->mm;
-	pid_t tgid = READ_ONCE(target_tgid);
+	struct pf_session *s;
 
-	if (!tgid || current->tgid != tgid || !mm)
-		return 0;
-	if (atomic_read(&current->signal->live) != 1)
-		return 0; /* not the last thread */
-
-	exit_regions = READ_ONCE(mm->map_count);
-	exit_vm = READ_ONCE(mm->total_vm);
-	exit_peak_vm = max(READ_ONCE(mm->hiwater_vm), exit_vm);
-	smp_store_release(&exit_valid, true);
+	rcu_read_lock();
+	s = rcu_dereference(cur_session);
+	if (s && current->tgid == s->tgid && mm &&
+	    atomic_read(&current->signal->live) == 1) {
+		s->exit_regions = READ_ONCE(mm->map_count);
+		s->exit_vm = READ_ONCE(mm->total_vm);
+		s->exit_peak_vm = max(READ_ONCE(mm->hiwater_vm), s->exit_vm);
+		smp_store_release(&s->exit_valid, true);
+	}
+	rcu_read_unlock();
 	return 0;
 }
 
@@ -169,51 +216,34 @@ static struct kprobe exit_probe = {
 
 /* ---------- target selection ---------- */
 
-static void reset_live(void)
-{
-	atomic64_set(&live_minor, 0);
-	atomic64_set(&live_major, 0);
-	atomic64_set(&live_anon, 0);
-	atomic64_set(&live_file, 0);
-	atomic64_set(&live_error, 0);
-	exit_valid = false;
-}
-
 /* Caller holds target_lock. nr == 0 clears the target. */
 static int set_target(int nr)
 {
-	struct pid *p = NULL;
+	struct pf_session *s = NULL, *old;
 	struct task_struct *task;
-	pid_t tgid = 0;
 
 	if (nr < 0)
 		return -EINVAL;
 	if (nr) {
-		p = find_get_pid(nr);
-		if (!p)
-			return -ESRCH;
-		task = get_pid_task(p, PIDTYPE_PID);
+		s = kzalloc(sizeof(*s), GFP_KERNEL);
+		if (!s)
+			return -ENOMEM;
+		s->pid = find_get_pid(nr);
+		task = s->pid ? get_pid_task(s->pid, PIDTYPE_PID) : NULL;
 		if (!task) {
-			put_pid(p);
+			put_pid(s->pid);
+			kfree(s);
 			return -ESRCH;
 		}
-		tgid = task->tgid;
+		s->tgid = task->tgid;
 		put_task_struct(task);
+		refcount_set(&s->ref, 1);	/* owned by cur_session */
+		s->since_ns = ktime_get_ns();
 	}
 
-	WRITE_ONCE(target_tgid, 0);
-	put_pid(target_pid);
-	target_pid = p;
-	reset_live();
-	target_since_ns = ktime_get_ns();
-	WRITE_ONCE(target_tgid, tgid);
+	old = rcu_replace_pointer(cur_session, s, lockdep_is_held(&target_lock));
+	session_put(old);
 	return 0;
-}
-
-/* Returns a referenced task or NULL. Caller holds target_lock. */
-static struct task_struct *target_task(void)
-{
-	return target_pid ? get_pid_task(target_pid, PIDTYPE_PID) : NULL;
 }
 
 /* ---------- helpers ---------- */
@@ -277,27 +307,21 @@ static int stats_show(struct seq_file *m, void *v)
 	struct vm_area_struct *vma;
 	char comm[TASK_COMM_LEN];
 	int threads, i, ret = 0;
-	pid_t nr;
-	u64 since;
+	struct pf_session *s = session_get();
 
-	mutex_lock(&target_lock);
-	nr = target_pid ? pid_nr(target_pid) : 0;
-	since = target_since_ns;
-	task = target_task();
-	mutex_unlock(&target_lock);
-
-	if (!nr) {
+	if (!s) {
 		seq_puts(m, "pid: 0\nstate: idle\n");
 		return 0;
 	}
 
-	seq_printf(m, "pid: %d\n", nr);
+	seq_printf(m, "pid: %d\n", pid_nr(s->pid));
+	task = get_pid_task(s->pid, PIDTYPE_PID);
 	if (!task) {
 		seq_puts(m, "state: exited\n");
-		if (smp_load_acquire(&exit_valid)) {
-			seq_printf(m, "exit_regions: %d\n", exit_regions);
-			seq_printf(m, "exit_vsize_kb: %lu\n", exit_vm << (PAGE_SHIFT - 10));
-			seq_printf(m, "peak_vsize_kb: %lu\n", exit_peak_vm << (PAGE_SHIFT - 10));
+		if (smp_load_acquire(&s->exit_valid)) {
+			seq_printf(m, "exit_regions: %d\n", s->exit_regions);
+			seq_printf(m, "exit_vsize_kb: %lu\n", s->exit_vm << (PAGE_SHIFT - 10));
+			seq_printf(m, "peak_vsize_kb: %lu\n", s->exit_peak_vm << (PAGE_SHIFT - 10));
 		}
 		goto live;
 	}
@@ -317,6 +341,7 @@ static int stats_show(struct seq_file *m, void *v)
 		ret = mmap_read_lock_killable(mm);
 		if (ret) {
 			mmput(mm);
+			session_put(s);
 			return ret;
 		}
 		for_each_vma(vmi, vma) {
@@ -349,14 +374,15 @@ static int stats_show(struct seq_file *m, void *v)
 	seq_printf(m, "maj_flt: %lu\n", maj);
 
 live:
-	seq_printf(m, "live_secs: %llu\n", (ktime_get_ns() - since) / NSEC_PER_SEC);
-	seq_printf(m, "live_min_flt: %lld\n", atomic64_read(&live_minor));
-	seq_printf(m, "live_maj_flt: %lld\n", atomic64_read(&live_major));
-	seq_printf(m, "live_anon_flt: %lld\n", atomic64_read(&live_anon));
-	seq_printf(m, "live_file_flt: %lld\n", atomic64_read(&live_file));
-	seq_printf(m, "live_err_flt: %lld\n", atomic64_read(&live_error));
+	seq_printf(m, "live_secs: %llu\n", (ktime_get_ns() - s->since_ns) / NSEC_PER_SEC);
+	seq_printf(m, "live_min_flt: %lld\n", atomic64_read(&s->minor));
+	seq_printf(m, "live_maj_flt: %lld\n", atomic64_read(&s->major));
+	seq_printf(m, "live_anon_flt: %lld\n", atomic64_read(&s->anon));
+	seq_printf(m, "live_file_flt: %lld\n", atomic64_read(&s->file));
+	seq_printf(m, "live_err_flt: %lld\n", atomic64_read(&s->error));
 	seq_printf(m, "follow: %d\n", READ_ONCE(follow));
 	seq_printf(m, "probe_missed: %d\n", fault_probe.nmissed);
+	session_put(s);
 	return 0;
 }
 
@@ -379,11 +405,13 @@ static int maps_show(struct seq_file *m, void *v)
 	struct task_struct *task;
 	struct mm_struct *mm;
 	struct vm_area_struct *vma;
+	struct pf_session *s = session_get();
 	int ret;
 
-	mutex_lock(&target_lock);
-	task = target_task();
-	mutex_unlock(&target_lock);
+	if (!s)
+		return 0;
+	task = get_pid_task(s->pid, PIDTYPE_PID);
+	session_put(s);
 	if (!task)
 		return 0;
 
@@ -441,9 +469,10 @@ static const struct proc_ops maps_ops = {
 
 static int target_show(struct seq_file *m, void *v)
 {
-	mutex_lock(&target_lock);
-	seq_printf(m, "%d\n", target_pid ? pid_nr(target_pid) : 0);
-	mutex_unlock(&target_lock);
+	struct pf_session *s = session_get();
+
+	seq_printf(m, "%d\n", s ? pid_nr(s->pid) : 0);
+	session_put(s);
 	return 0;
 }
 
@@ -529,6 +558,7 @@ static void __exit pfcount_exit(void)
 	mutex_lock(&target_lock);
 	set_target(0);
 	mutex_unlock(&target_lock);
+	rcu_barrier();	/* wait for session_free_rcu() before the code goes away */
 	pr_info("pfcount: unloaded\n");
 }
 
