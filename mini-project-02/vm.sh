@@ -7,7 +7,7 @@
 #   ./vm.sh stop|delete
 set -eu
 VM=cpe333
-DIR=$(cd "$(dirname "$0")" && pwd)
+DIR=$(realpath "$(dirname "$0")")  # real on-disk case: the VM mount is case-sensitive
 
 case "${1:-}" in
 setup)

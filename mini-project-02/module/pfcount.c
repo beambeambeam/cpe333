@@ -13,6 +13,13 @@
  *               target takes after monitoring starts, split minor/major and
  *               anonymous/file-backed. Uses the same major/minor rule as
  *               mm_account_fault() in mm/memory.c.
+ *
+ * A kprobe on do_exit() saves the region count and address-space size when
+ * the target's last thread exits, so short-lived programs still get a result.
+ *
+ * Module parameter "follow" (writable in /sys/module/pfcount/parameters/)
+ * makes the live counters also include the target's descendant processes,
+ * the same scope as getrusage() of a waited-for child.
  */
 #include <linux/atomic.h>
 #include <linux/kprobes.h>
@@ -36,6 +43,10 @@ static int pid;
 module_param(pid, int, 0444);
 MODULE_PARM_DESC(pid, "PID to monitor at load time (optional)");
 
+static bool follow;
+module_param(follow, bool, 0644);
+MODULE_PARM_DESC(follow, "Also count faults of the target's descendants");
+
 /* Target state. target_pid is protected by target_lock. */
 static DEFINE_MUTEX(target_lock);
 static struct pid *target_pid;
@@ -43,6 +54,11 @@ static pid_t target_tgid;	/* read locklessly by the probe */
 static u64 target_since_ns;
 
 static atomic64_t live_minor, live_major, live_anon, live_file, live_error;
+
+/* Snapshot taken by the do_exit() probe. */
+static bool exit_valid;
+static int exit_regions;
+static unsigned long exit_vm, exit_peak_vm;	/* pages */
 
 static struct proc_dir_entry *pf_dir;
 
@@ -53,6 +69,32 @@ struct fault_ctx {
 	bool file;
 };
 
+/* True if current belongs to the target, or descends from it in follow mode. */
+static bool is_tracked(pid_t tgid)
+{
+	struct task_struct *t;
+	bool found = false;
+	int depth = 0;
+
+	if (!tgid)
+		return false;
+	if (current->tgid == tgid)
+		return true;
+	if (!READ_ONCE(follow))
+		return false;
+
+	rcu_read_lock();
+	for (t = current; t->pid > 1 && depth < 64; depth++) {
+		t = rcu_dereference(t->real_parent);
+		if (t->tgid == tgid) {
+			found = true;
+			break;
+		}
+	}
+	rcu_read_unlock();
+	return found;
+}
+
 /* handle_mm_fault(struct vm_area_struct *vma, unsigned long address,
  *                 unsigned int flags, struct pt_regs *regs) */
 static int fault_entry(struct kretprobe_instance *ri, struct pt_regs *regs)
@@ -61,7 +103,7 @@ static int fault_entry(struct kretprobe_instance *ri, struct pt_regs *regs)
 	struct fault_ctx *ctx = (struct fault_ctx *)ri->data;
 	struct vm_area_struct *vma;
 
-	if (!tgid || current->tgid != tgid)
+	if (!is_tracked(tgid))
 		return 1; /* not our process: skip the return handler */
 
 	vma = (struct vm_area_struct *)regs_get_kernel_argument(regs, 0);
@@ -98,6 +140,30 @@ static struct kretprobe fault_probe = {
 	.maxactive	= 64,
 };
 
+/* do_exit() runs before exit_mm(), so current->mm is still valid here. The
+ * probe runs in atomic context: read the counters without mmap_lock. */
+static int exit_pre(struct kprobe *p, struct pt_regs *regs)
+{
+	struct mm_struct *mm = current->mm;
+	pid_t tgid = READ_ONCE(target_tgid);
+
+	if (!tgid || current->tgid != tgid || !mm)
+		return 0;
+	if (atomic_read(&current->signal->live) != 1)
+		return 0; /* not the last thread */
+
+	exit_regions = READ_ONCE(mm->map_count);
+	exit_vm = READ_ONCE(mm->total_vm);
+	exit_peak_vm = max(READ_ONCE(mm->hiwater_vm), exit_vm);
+	smp_store_release(&exit_valid, true);
+	return 0;
+}
+
+static struct kprobe exit_probe = {
+	.symbol_name	= "do_exit",
+	.pre_handler	= exit_pre,
+};
+
 /* ---------- target selection ---------- */
 
 static void reset_live(void)
@@ -107,6 +173,7 @@ static void reset_live(void)
 	atomic64_set(&live_anon, 0);
 	atomic64_set(&live_file, 0);
 	atomic64_set(&live_error, 0);
+	exit_valid = false;
 }
 
 /* Caller holds target_lock. nr == 0 clears the target. */
@@ -201,7 +268,7 @@ static int stats_show(struct seq_file *m, void *v)
 {
 	unsigned long count[R_NKINDS] = {}, bytes[R_NKINDS] = {};
 	unsigned long regions = 0, vsize = 0, min, maj;
-	unsigned long total_vm = 0, rss = 0;
+	unsigned long total_vm = 0, peak_vm = 0, rss = 0;
 	struct task_struct *task;
 	struct mm_struct *mm = NULL;
 	struct vm_area_struct *vma;
@@ -224,6 +291,11 @@ static int stats_show(struct seq_file *m, void *v)
 	seq_printf(m, "pid: %d\n", nr);
 	if (!task) {
 		seq_puts(m, "state: exited\n");
+		if (smp_load_acquire(&exit_valid)) {
+			seq_printf(m, "exit_regions: %d\n", exit_regions);
+			seq_printf(m, "exit_vsize_kb: %lu\n", exit_vm << (PAGE_SHIFT - 10));
+			seq_printf(m, "peak_vsize_kb: %lu\n", exit_peak_vm << (PAGE_SHIFT - 10));
+		}
 		goto live;
 	}
 
@@ -255,6 +327,7 @@ static int stats_show(struct seq_file *m, void *v)
 			bytes[k] += sz;
 		}
 		total_vm = mm->total_vm;
+		peak_vm = max(mm->hiwater_vm, total_vm);
 		rss = get_mm_rss(mm);
 		mmap_read_unlock(mm);
 		mmput(mm);
@@ -262,6 +335,7 @@ static int stats_show(struct seq_file *m, void *v)
 		seq_printf(m, "regions: %lu\n", regions);
 		seq_printf(m, "vsize_kb: %lu\n", vsize >> 10);
 		seq_printf(m, "total_vm_kb: %lu\n", total_vm << (PAGE_SHIFT - 10));
+		seq_printf(m, "peak_vsize_kb: %lu\n", peak_vm << (PAGE_SHIFT - 10));
 		seq_printf(m, "rss_kb: %lu\n", rss << (PAGE_SHIFT - 10));
 		for (i = 0; i < R_NKINDS; i++)
 			seq_printf(m, "regions_%s: %lu %lu\n", kind_name[i],
@@ -278,6 +352,7 @@ live:
 	seq_printf(m, "live_anon_flt: %lld\n", atomic64_read(&live_anon));
 	seq_printf(m, "live_file_flt: %lld\n", atomic64_read(&live_file));
 	seq_printf(m, "live_err_flt: %lld\n", atomic64_read(&live_error));
+	seq_printf(m, "follow: %d\n", READ_ONCE(follow));
 	seq_printf(m, "probe_missed: %d\n", fault_probe.nmissed);
 	return 0;
 }
@@ -407,6 +482,12 @@ static int __init pfcount_init(void)
 		pr_err("pfcount: register_kretprobe(handle_mm_fault) failed: %d\n", ret);
 		return ret;
 	}
+	ret = register_kprobe(&exit_probe);
+	if (ret) {
+		pr_err("pfcount: register_kprobe(do_exit) failed: %d\n", ret);
+		unregister_kretprobe(&fault_probe);
+		return ret;
+	}
 
 	pf_dir = proc_mkdir("pfcount", NULL);
 	if (!pf_dir ||
@@ -432,6 +513,7 @@ static int __init pfcount_init(void)
 
 err:
 	proc_remove(pf_dir);
+	unregister_kprobe(&exit_probe);
 	unregister_kretprobe(&fault_probe);
 	return ret;
 }
@@ -439,6 +521,7 @@ err:
 static void __exit pfcount_exit(void)
 {
 	proc_remove(pf_dir);
+	unregister_kprobe(&exit_probe);
 	unregister_kretprobe(&fault_probe);
 	mutex_lock(&target_lock);
 	set_target(0);
