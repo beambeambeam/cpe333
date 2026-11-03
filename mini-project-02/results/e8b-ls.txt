@@ -1,0 +1,12 @@
+$ sudo tools/pfstat -- sh -c ls -R /usr/include >/dev/null
+
+pfcount run: sh -c ls -R /usr/include >/dev/null  (pid 6351, 0.01s, exit 0)
+  Memory regions at exit                    17
+  Virtual address space at exit         2.3 MB
+  Peak virtual address space            2.3 MB
+  Minor page faults                        257   differs by -135 vs getrusage()
+  Major page faults                          0   match vs getrusage()
+    on anonymous memory                    146
+    on file-backed memory                  111
+  fault scope: process only
+  getrusage() includes child processes: use -f to count them too

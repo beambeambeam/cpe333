@@ -1,0 +1,17 @@
+$ sudo tools/pfstat 1
+pfcount report: pid 1 (systemd)
+  Memory regions (VMAs)                    113   match vs /proc/PID/maps
+  Total virtual address space          22.1 MB   match vs /proc/PID/maps
+    mm->total_vm                       22.1 MB   match vs VmSize
+    peak (VmPeak)                      22.1 MB   
+  Resident set size                    12.2 MB   
+  Minor page faults                     32,605   match vs /proc/PID/stat
+  Major page faults                         95   match vs /proc/PID/stat
+  Threads                                    1   
+
+  Regions by type           count          size
+    file                           98       18.5 MB
+    anon                           11        356 KB
+    heap                            1        3.1 MB
+    stack                           1        132 KB
+    special                         2         12 KB

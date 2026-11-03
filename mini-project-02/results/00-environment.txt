@@ -1,0 +1,10 @@
+date:    2026-11-03T15:17:40Z
+kernel:  6.8.0-142-generic aarch64
+distro:  Ubuntu 24.04.5 LTS
+gcc:     gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+page:    4096 bytes
+thp:     always [madvise] never
+fault_around_bytes: 65536
+read_ahead_kb:      128
+cpus:    4
+memory:  3904 MB
