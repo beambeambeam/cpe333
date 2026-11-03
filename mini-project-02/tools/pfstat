@@ -1,0 +1,279 @@
+#!/usr/bin/env python3
+"""pfstat - front end for the pfcount kernel module.
+
+  sudo pfstat PID                 one-shot report, checked against /proc
+  sudo pfstat PID --maps          also list every memory region (VMA)
+  sudo pfstat PID -w [SEC]        watch: one line per interval with fault rates
+  sudo pfstat -- CMD [ARGS...]    run CMD, count every fault it takes, check
+                                  the result against getrusage()
+"""
+import argparse
+import os
+import signal
+import sys
+import time
+
+PROC = "/proc/pfcount"
+TTY = sys.stdout.isatty()
+
+
+def c(code, s):
+    return f"\033[{code}m{s}\033[0m" if TTY else str(s)
+
+
+def bold(s): return c("1", s)
+def dim(s): return c("2", s)
+def ok(s): return c("32", s)
+def bad(s): return c("31", s)
+
+
+def die(msg):
+    print(f"pfstat: {msg}", file=sys.stderr)
+    sys.exit(1)
+
+
+# ---------- module interface ----------
+
+def set_target(pid):
+    try:
+        with open(f"{PROC}/target", "w") as f:
+            f.write(str(pid))
+    except ProcessLookupError:
+        die(f"no process with pid {pid}")
+    except PermissionError:
+        die("permission denied, run with sudo")
+
+
+def read_stats():
+    out = {}
+    with open(f"{PROC}/stats") as f:
+        for line in f:
+            k, _, v = line.partition(":")
+            v = v.strip()
+            if k.startswith("regions_"):
+                n, kb = v.split()
+                out[k] = (int(n), int(kb))
+            else:
+                out[k] = int(v) if v.lstrip("-").isdigit() else v
+    return out
+
+
+def read_maps():
+    with open(f"{PROC}/maps") as f:
+        return f.read()
+
+
+# ---------- reference values from procfs ----------
+
+def proc_reference(pid):
+    """Return (regions, vsize_kb, VmSize_kb, minflt, majflt) from /proc/<pid>."""
+    regions = vsize = 0
+    with open(f"/proc/{pid}/maps") as f:
+        for line in f:
+            if line.rstrip().endswith("[vsyscall]"):
+                continue  # x86 gate area, not a VMA in the mm tree
+            lo, hi = line.split()[0].split("-")
+            regions += 1
+            vsize += int(hi, 16) - int(lo, 16)
+    vmsize = 0
+    with open(f"/proc/{pid}/status") as f:
+        for line in f:
+            if line.startswith("VmSize:"):
+                vmsize = int(line.split()[1])
+    with open(f"/proc/{pid}/stat") as f:
+        fields = f.read().rsplit(")", 1)[1].split()
+    # fields[0] is stat field 3 (state): minflt is field 10, majflt field 12
+    return regions, vsize >> 10, vmsize, int(fields[7]), int(fields[9])
+
+
+# ---------- formatting ----------
+
+def human_kb(kb):
+    for unit in ("KB", "MB", "GB", "TB"):
+        if kb < 1024 or unit == "TB":
+            return f"{kb:.1f} {unit}" if unit != "KB" else f"{kb} KB"
+        kb /= 1024
+
+
+def check(mine, ref):
+    if mine == ref:
+        return ok("match")
+    return bad(f"differs by {mine - ref:+d}")
+
+
+def print_report(s, ref=None):
+    print(bold(f"pfcount report: pid {s['pid']} ({s.get('comm', '?')})"))
+    if s["state"] != "running":
+        print(f"  state: {s['state']}")
+        return
+    rows = [
+        ("Memory regions (VMAs)", f"{s['regions']}",
+         ref and check(s["regions"], ref[0]) + dim(" vs /proc/PID/maps")),
+        ("Total virtual address space", human_kb(s["vsize_kb"]),
+         ref and check(s["vsize_kb"], ref[1]) + dim(" vs /proc/PID/maps")),
+        ("  mm->total_vm", human_kb(s["total_vm_kb"]),
+         ref and check(s["total_vm_kb"], ref[2]) + dim(" vs VmSize")),
+        ("Resident set size", human_kb(s["rss_kb"]), ""),
+        ("Minor page faults", f"{s['min_flt']:,}",
+         ref and check(s["min_flt"], ref[3]) + dim(" vs /proc/PID/stat")),
+        ("Major page faults", f"{s['maj_flt']:,}",
+         ref and check(s["maj_flt"], ref[4]) + dim(" vs /proc/PID/stat")),
+        ("Threads", f"{s['threads']}", ""),
+    ]
+    for name, val, note in rows:
+        print(f"  {name:<30}{val:>14}   {note or ''}")
+
+    print(bold("\n  Regions by type") + dim("           count          size"))
+    for k in ("file", "anon", "heap", "stack", "special"):
+        n, kb = s[f"regions_{k}"]
+        if n:
+            print(f"    {k:<26}{n:>7}{human_kb(kb):>14}")
+
+
+def print_maps(text):
+    print(bold("\n  Regions") + dim("  (start-end perms size-KB type name)"))
+    for line in text.splitlines():
+        print("    " + line)
+
+
+# ---------- modes ----------
+
+def cmd_report(pid, show_maps):
+    set_target(pid)
+    s = read_stats()
+    try:
+        ref = proc_reference(pid)
+    except (FileNotFoundError, ProcessLookupError):
+        ref = None
+    print_report(s, ref)
+    if show_maps:
+        print_maps(read_maps())
+
+
+WATCH_HDR = (f"{'time':>8} {'regions':>8} {'vsize':>11} {'rss':>11} "
+             f"{'minflt':>11} {'majflt':>9} {'min/s':>9} {'maj/s':>8}")
+
+
+def watch_line(s, prev, dt, t0):
+    dmin = (s["min_flt"] - prev["min_flt"]) / dt if prev else 0
+    dmaj = (s["maj_flt"] - prev["maj_flt"]) / dt if prev else 0
+    hl = (lambda x: c("33", x)) if (dmin or dmaj) else str
+    return hl(f"{time.monotonic() - t0:8.1f} {s['regions']:>8} "
+              f"{human_kb(s['vsize_kb']):>11} {human_kb(s['rss_kb']):>11} "
+              f"{s['min_flt']:>11,} {s['maj_flt']:>9,} {dmin:>9.0f} {dmaj:>8.0f}")
+
+
+def cmd_watch(pid, interval):
+    set_target(pid)
+    s = read_stats()
+    print(bold(f"watching pid {pid} ({s.get('comm', '?')}), Ctrl-C to stop"))
+    t0 = time.monotonic()
+    prev, n = None, 0
+    try:
+        while True:
+            s = read_stats()
+            if s["state"] != "running":
+                print(f"process {s['state']}")
+                break
+            if n % 20 == 0:
+                print(dim(WATCH_HDR))
+            print(watch_line(s, prev, interval, t0))
+            prev, n = s, n + 1
+            time.sleep(interval)
+    except KeyboardInterrupt:
+        print()
+
+
+def cmd_run(argv, interval):
+    child = os.fork()
+    if child == 0:
+        os.kill(os.getpid(), signal.SIGSTOP)  # wait until the parent targets us
+        if os.getuid() == 0 and "SUDO_UID" in os.environ:
+            os.setgroups([])
+            os.setgid(int(os.environ["SUDO_GID"]))
+            os.setuid(int(os.environ["SUDO_UID"]))
+        try:
+            os.execvp(argv[0], argv)
+        except OSError as e:
+            print(f"pfstat: {argv[0]}: {e.strerror}", file=sys.stderr)
+            os._exit(127)
+
+    os.waitpid(child, os.WUNTRACED)
+    set_target(child)
+    base = read_stats()  # child is stopped: lifetime counters are stable
+    os.kill(child, signal.SIGCONT)
+
+    t0 = time.monotonic()
+    peak_regions = peak_vsize = 0
+    prev, n = None, 0
+    while True:
+        wpid, status, ru = os.wait4(child, os.WNOHANG)
+        if wpid:
+            break
+        s = read_stats()
+        execed = (s.get("comm") != base["comm"]
+                  or s.get("comm") == os.path.basename(argv[0])[:15])
+        if s["state"] == "running" and execed:
+            peak_regions = max(peak_regions, s["regions"])
+            peak_vsize = max(peak_vsize, s["vsize_kb"])
+            if interval:
+                if n % 20 == 0:
+                    print(dim(WATCH_HDR))
+                print(watch_line(s, prev, interval, t0))
+                prev, n = s, n + 1
+        time.sleep(interval or 0.05)
+
+    end = read_stats()
+    elapsed = time.monotonic() - t0
+    exp_min = ru.ru_minflt - base["min_flt"]
+    exp_maj = ru.ru_majflt - base["maj_flt"]
+
+    print(bold(f"\npfcount run: {' '.join(argv)}  (pid {child}, "
+               f"{elapsed:.2f}s, exit {os.waitstatus_to_exitcode(status)})"))
+    print(f"  {'Peak memory regions (sampled)':<30}{peak_regions:>14}")
+    print(f"  {'Peak virtual space (sampled)':<30}{human_kb(peak_vsize):>14}")
+    print(f"  {'Minor page faults':<30}{end['live_min_flt']:>14,}   "
+          + check(end["live_min_flt"], exp_min) + dim(" vs getrusage()"))
+    print(f"  {'Major page faults':<30}{end['live_maj_flt']:>14,}   "
+          + check(end["live_maj_flt"], exp_maj) + dim(" vs getrusage()"))
+    print(f"  {'  on anonymous memory':<30}{end['live_anon_flt']:>14,}")
+    print(f"  {'  on file-backed memory':<30}{end['live_file_flt']:>14,}")
+    if end["live_err_flt"]:
+        print(f"  {'  failed (SIGSEGV/SIGBUS)':<30}{end['live_err_flt']:>14,}")
+    if end["probe_missed"]:
+        print(bad(f"  kretprobe missed {end['probe_missed']} faults"))
+    set_target(0)
+
+
+def main():
+    ap = argparse.ArgumentParser(
+        prog="pfstat", description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("pid", nargs="?", type=int, help="process to inspect")
+    ap.add_argument("-w", "--watch", nargs="?", type=float, const=1.0,
+                    metavar="SEC", help="refresh every SEC seconds (default 1)")
+    ap.add_argument("-m", "--maps", action="store_true", help="list every region")
+    argv = sys.argv[1:]
+    cmd = []
+    if "--" in argv:
+        i = argv.index("--")
+        argv, cmd = argv[:i], argv[i + 1:]
+    args = ap.parse_args(argv)
+
+    if not os.path.isdir(PROC):
+        die(f"{PROC} not found, load the module first: sudo insmod module/pfcount.ko")
+
+    if cmd and args.pid is None:
+        cmd_run(cmd, args.watch)
+    elif args.pid is not None and not cmd:
+        if args.watch:
+            cmd_watch(args.pid, args.watch)
+        else:
+            cmd_report(args.pid, args.maps)
+    else:
+        ap.print_usage()
+        sys.exit(2)
+
+
+if __name__ == "__main__":
+    main()
