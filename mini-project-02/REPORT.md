@@ -105,7 +105,7 @@ All three `/proc/pfcount` files are root-only (`0600`/`0400`). The module can se
 
 ### 4.2 Fault counts: two sources
 
-**Lifetime counts** show all faults since the process started. The module adds `task->min_flt` and `task->maj_flt` for every live thread and adds `signal->min_flt` and `signal->maj_flt` for threads that already exited. `/proc/<pid>/stat` uses the same sum, so the two must be equal.
+**Lifetime counts** show all faults since the process started. The module adds `task->min_flt` and `task->maj_flt` for every live thread and adds `signal->min_flt` and `signal->maj_flt` for threads that already exited. `/proc/<pid>/stat` uses the same sum, so the two must be equal. The sum is read under `signal->stats_lock`, a seqlock, like `do_task_stat()`. When a thread exits, `__exit_signal()` moves its counts into `signal->min_flt` under that lock. A plain RCU walk can see the thread both in the list and in `signal->min_flt`, so it counts it twice, and the next read is lower. `tests/regress.sh lifetime` caught 24 such drops in 20,000 reads without the lock.
 
 **Live counts** show faults from the moment the user selects the target. A kretprobe on `handle_mm_fault()` does the work:
 

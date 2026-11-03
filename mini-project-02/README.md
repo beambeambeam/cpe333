@@ -64,7 +64,7 @@ echo 1 | sudo tee /sys/module/pfcount/parameters/follow   # include descendants
 
 **Faults – two sources.**
 
-1. *Lifetime*: `task->min_flt` and `task->maj_flt`, summed over all threads, plus counts from threads that already exited (`signal->min_flt`). `/proc/<pid>/stat` uses the same sum.
+1. *Lifetime*: `task->min_flt` and `task->maj_flt`, summed over all threads, plus counts from threads that already exited (`signal->min_flt`). `/proc/<pid>/stat` uses the same sum, read under the same `signal->stats_lock` seqlock.
 2. *Live*: a kretprobe on `handle_mm_fault()`, the function every user page fault goes through. It counts faults only for the target's thread group, from the moment you select it. It sorts each fault as minor or major and as anonymous or file-backed. It uses the same rule as the kernel's `mm_account_fault()`. Retried faults count once, and failed faults are counted separately.
 
 A kprobe on `acct_collect()` (called by `do_exit()` with `group_dead` set for the last thread only) saves the region count, the size at exit, and the peak size (`hiwater_vm`) when the target exits. Short programs that exit before the first sample still get a result.

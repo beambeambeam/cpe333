@@ -9,4 +9,5 @@ Module.symvers
 .tmp_versions/
 tests/faultgen
 tests/threadexit
+tests/threadchurn
 *.bin

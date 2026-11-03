@@ -262,18 +262,31 @@ static int set_target(int nr)
 static void lifetime_faults(struct task_struct *task, unsigned long *min,
 			    unsigned long *maj, int *threads)
 {
+	struct signal_struct *sig = task->signal;
 	struct task_struct *t;
+	unsigned long flags;
+	unsigned int seq = 1;
 
-	rcu_read_lock();
-	*min = task->signal->min_flt;
-	*maj = task->signal->maj_flt;
-	*threads = 0;
-	for_each_thread(task, t) {
-		*min += t->min_flt;
-		*maj += t->maj_flt;
-		(*threads)++;
-	}
-	rcu_read_unlock();
+	/*
+	 * Same pattern as do_task_stat(): __exit_signal() moves an exiting
+	 * thread's counts into sig->min_flt under stats_lock. Without the
+	 * seqlock we can see the thread in both places, or in neither.
+	 */
+	do {
+		seq++; /* 2 on the first, lockless pass; odd (locked) on retry */
+		flags = read_seqbegin_or_lock_irqsave(&sig->stats_lock, &seq);
+		*min = sig->min_flt;
+		*maj = sig->maj_flt;
+		*threads = 0;
+		rcu_read_lock();
+		__for_each_thread(sig, t) {
+			*min += t->min_flt;
+			*maj += t->maj_flt;
+			(*threads)++;
+		}
+		rcu_read_unlock();
+	} while (need_seqretry(&sig->stats_lock, seq));
+	done_seqretry_irqrestore(&sig->stats_lock, seq, flags);
 }
 
 enum region_kind { R_FILE, R_ANON, R_HEAP, R_STACK, R_SPECIAL, R_NKINDS };

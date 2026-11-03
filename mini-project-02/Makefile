@@ -8,10 +8,10 @@ all: module faultgen
 module:
 	$(MAKE) -C module
 
-faultgen: tests/faultgen tests/threadexit
+faultgen: tests/faultgen tests/threadexit tests/threadchurn
 tests/faultgen: tests/faultgen.c
 	$(CC) -O2 -Wall -o $@ $<
-tests/threadexit: tests/threadexit.c
+tests/threadexit tests/threadchurn: %: %.c
 	$(CC) -O2 -Wall -pthread -o $@ $<
 
 load: module

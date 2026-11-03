@@ -65,7 +65,28 @@ check_threadexit() {
 	[ $miss = 0 ] && pass "threadexit (100 runs)" || fail threadexit "$miss/100 runs had no exit snapshot"
 }
 
-CHECKS=${*:-retarget pidreuse threadexit}
+# Threads start and exit in a loop. The lifetime min_flt sum must never go
+# down: an exiting thread must not be counted twice or missed for a moment.
+check_lifetime() {
+	tests/threadchurn & P=$!
+	echo $P > $T/target
+	out=$(python3 - "$T/stats" <<'PY'
+import sys
+prev = drops = 0
+for _ in range(20000):
+    with open(sys.argv[1]) as f:
+        n = int(next(l for l in f if l.startswith("min_flt:")).split()[1])
+    if n < prev:
+        drops += 1
+    prev = n
+print(drops)
+PY
+)
+	kill -9 $P; wait $P 2>/dev/null
+	[ "$out" = 0 ] && pass "lifetime (20000 reads)" || fail lifetime "min_flt went down $out times in 20000 reads"
+}
+
+CHECKS=${*:-retarget pidreuse threadexit lifetime}
 for c in $CHECKS; do "check_$c"; done
 echo 0 > $T/target
 exit $FAIL
