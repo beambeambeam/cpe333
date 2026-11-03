@@ -9,6 +9,7 @@
   sudo pfstat -f -- CMD [ARGS...] same, and include CMD's child processes
 """
 import argparse
+import math
 import os
 import signal
 import sys
@@ -220,59 +221,76 @@ def cmd_run(argv, interval, follow):
             print(f"pfstat: {argv[0]}: {e.strerror}", file=sys.stderr)
             os._exit(127)
 
-    os.waitpid(child, os.WUNTRACED)
-    set_follow(follow)
-    set_target(child)
-    base = read_stats()  # child is stopped: lifetime counters are stable
-    os.kill(child, signal.SIGCONT)
+    reaped = False
+    try:
+        os.waitpid(child, os.WUNTRACED)
+        set_follow(follow)
+        set_target(child)
+        base = read_stats()  # child is stopped: lifetime counters are stable
+        os.kill(child, signal.SIGCONT)
 
-    t0 = time.monotonic()
-    prev, n = None, 0
-    while True:
-        wpid, status, ru = os.wait4(child, os.WNOHANG)
-        if wpid:
-            break
-        if interval:
-            s, t = read_stats(), time.monotonic()
-            if s["state"] == "running":
-                if n % 20 == 0:
-                    print(dim(WATCH_HDR))
-                print(watch_line(s, t, prev, t0))
-                prev, n = (s, t), n + 1
-        time.sleep(interval or 0.01)
+        t0 = time.monotonic()
+        prev, n = None, 0
+        while True:
+            wpid, status, ru = os.wait4(child, os.WNOHANG)
+            if wpid:
+                reaped = True
+                break
+            if interval:
+                s, t = read_stats(), time.monotonic()
+                if s["state"] == "running":
+                    if n % 20 == 0:
+                        print(dim(WATCH_HDR))
+                    print(watch_line(s, t, prev, t0))
+                    prev, n = (s, t), n + 1
+            time.sleep(interval or 0.01)
 
-    end = read_stats()
-    elapsed = time.monotonic() - t0
-    exp_min = ru.ru_minflt - base["min_flt"]
-    exp_maj = ru.ru_majflt - base["maj_flt"]
-    scope = "process + descendants" if follow else "process only"
-    chk, ref_name = (follow_check, "wait4(), waited descendants only") if follow \
-        else (check, "getrusage()")
+        end = read_stats()
+        elapsed = time.monotonic() - t0
+        exp_min = ru.ru_minflt - base["min_flt"]
+        exp_maj = ru.ru_majflt - base["maj_flt"]
+        scope = "process + descendants" if follow else "process only"
+        chk, ref_name = (follow_check, "wait4(), waited descendants only") if follow \
+            else (check, "getrusage()")
 
-    print(bold(f"\npfcount run: {' '.join(argv)}  (pid {child}, "
-               f"{elapsed:.2f}s, exit {os.waitstatus_to_exitcode(status)})"))
-    if "exit_regions" in end:
-        print(f"  {'Memory regions at exit':<30}{end['exit_regions']:>14}")
-        print(f"  {'Virtual address space at exit':<30}{human_kb(end['exit_vsize_kb']):>14}")
-        print(f"  {'Peak virtual address space':<30}{human_kb(end['peak_vsize_kb']):>14}")
-    print(f"  {'Minor page faults':<30}{end['live_min_flt']:>14,}   "
-          + chk(end["live_min_flt"], exp_min) + dim(f" vs {ref_name}"))
-    print(f"  {'Major page faults':<30}{end['live_maj_flt']:>14,}   "
-          + chk(end["live_maj_flt"], exp_maj) + dim(f" vs {ref_name}"))
-    print(f"  {'  on anonymous memory':<30}{end['live_anon_flt']:>14,}")
-    print(f"  {'  on file-backed memory':<30}{end['live_file_flt']:>14,}")
-    if end["live_err_flt"]:
-        print(f"  {'  failed (SIGSEGV/SIGBUS)':<30}{end['live_err_flt']:>14,}")
-    print(dim(f"  fault scope: {scope}"))
-    if not follow and end["live_min_flt"] != exp_min:
-        print(dim("  getrusage() includes child processes: use -f to count them too"))
-    if follow and (end["live_min_flt"] > exp_min or end["live_maj_flt"] > exp_maj):
-        print(dim("  pfcount counts every descendant. wait4() misses descendants that\n"
-                  "  nobody waited for (SIGCHLD ignored, or reparented after a parent exit)"))
-    if end["probe_missed"]:
-        print(bad(f"  kretprobe missed {end['probe_missed']} faults"))
-    set_target(0)
-    set_follow(False)
+        print(bold(f"\npfcount run: {' '.join(argv)}  (pid {child}, "
+                   f"{elapsed:.2f}s, exit {os.waitstatus_to_exitcode(status)})"))
+        if "exit_regions" in end:
+            print(f"  {'Memory regions at exit':<30}{end['exit_regions']:>14}")
+            print(f"  {'Virtual address space at exit':<30}{human_kb(end['exit_vsize_kb']):>14}")
+            print(f"  {'Peak virtual address space':<30}{human_kb(end['peak_vsize_kb']):>14}")
+        print(f"  {'Minor page faults':<30}{end['live_min_flt']:>14,}   "
+              + chk(end["live_min_flt"], exp_min) + dim(f" vs {ref_name}"))
+        print(f"  {'Major page faults':<30}{end['live_maj_flt']:>14,}   "
+              + chk(end["live_maj_flt"], exp_maj) + dim(f" vs {ref_name}"))
+        print(f"  {'  on anonymous memory':<30}{end['live_anon_flt']:>14,}")
+        print(f"  {'  on file-backed memory':<30}{end['live_file_flt']:>14,}")
+        if end["live_err_flt"]:
+            print(f"  {'  failed (SIGSEGV/SIGBUS)':<30}{end['live_err_flt']:>14,}")
+        print(dim(f"  fault scope: {scope}"))
+        if not follow and end["live_min_flt"] != exp_min:
+            print(dim("  getrusage() includes child processes: use -f to count them too"))
+        if follow and (end["live_min_flt"] > exp_min or end["live_maj_flt"] > exp_maj):
+            print(dim("  pfcount counts every descendant. wait4() misses descendants that\n"
+                      "  nobody waited for (SIGCHLD ignored, or reparented after a parent exit)"))
+        if end["probe_missed"]:
+            print(bad(f"  kretprobe missed {end['probe_missed']} faults"))
+    finally:
+        if not reaped:  # error or Ctrl-C before the child exited
+            try:
+                os.kill(child, signal.SIGKILL)
+                os.waitpid(child, 0)
+            except ChildProcessError:
+                pass
+        set_target(0)
+        set_follow(False)
+
+
+def interval(text):
+    sec = float(text)
+    if not (math.isfinite(sec) and sec > 0):
+        raise argparse.ArgumentTypeError(f"must be a positive number of seconds: {text}")
+    return sec
 
 
 def main():
@@ -280,7 +298,7 @@ def main():
         prog="pfstat", description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("pid", nargs="?", type=int, help="process to inspect")
-    ap.add_argument("-w", "--watch", nargs="?", type=float, const=1.0,
+    ap.add_argument("-w", "--watch", nargs="?", type=interval, const=1.0,
                     metavar="SEC", help="refresh every SEC seconds (default 1)")
     ap.add_argument("-m", "--maps", action="store_true", help="list every region")
     ap.add_argument("-f", "--follow", action="store_true",
