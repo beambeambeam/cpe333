@@ -5,7 +5,7 @@ pfcount report: pid 1 (systemd)
     mm->total_vm                       22.1 MB   match vs VmSize
     peak (VmPeak)                      22.1 MB   
   Resident set size                    12.2 MB   
-  Minor page faults                     32,605   match vs /proc/PID/stat
+  Minor page faults                     35,741   match vs /proc/PID/stat
   Major page faults                         95   match vs /proc/PID/stat
   Threads                                    1   
 

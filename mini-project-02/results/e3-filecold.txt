@@ -1,14 +1,14 @@
 $ sudo tools/pfstat -- tests/faultgen file:/tmp/pfcount-big.bin
-[faultgen 6332] start                        minflt=553 majflt=1
-[faultgen 6332] file 32768 KB (8192 pages)   minflt=565 majflt=8193
-[faultgen 6332] done                         minflt=565 majflt=8193
+[faultgen 213371] start                        minflt=543 majflt=1
+[faultgen 213371] file 32768 KB (8192 pages)   minflt=555 majflt=8193
+[faultgen 213371] done                         minflt=555 majflt=8193
 
-pfcount run: tests/faultgen file:/tmp/pfcount-big.bin  (pid 6332, 0.37s, exit 0)
+pfcount run: tests/faultgen file:/tmp/pfcount-big.bin  (pid 213371, 0.42s, exit 0)
   Memory regions at exit                    17
   Virtual address space at exit        34.2 MB
   Peak virtual address space           34.2 MB
   Minor page faults                        140   match vs getrusage()
   Major page faults                      8,193   match vs getrusage()
-    on anonymous memory                     66
-    on file-backed memory                8,267
+    on anonymous memory                     65
+    on file-backed memory                8,268
   fault scope: process only
