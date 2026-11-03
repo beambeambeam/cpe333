@@ -13,10 +13,22 @@ lsmod | grep -q '^pfcount' && sudo rmmod pfcount
 sudo insmod module/pfcount.ko
 [ -f "$BIG" ] || dd if=/dev/urandom of="$BIG" bs=1M count=32 status=none
 
+# Print a command line, quoting arguments with spaces or shell characters.
+show() {
+	printf '$'
+	for a; do
+		case $a in
+		*[[:space:]\'\"\<\>\|\&\;\$]*) printf " '%s'" "$a" ;;
+		*) printf ' %s' "$a" ;;
+		esac
+	done
+	echo
+}
+
 run() { # name, description, command...
 	name=$1; desc=$2; shift 2
 	echo "== $name: $desc"
-	{ echo "\$ $*"; "$@" 2>&1; } > "$OUT/$name.txt"
+	{ show "$@"; "$@" 2>&1; } > "$OUT/$name.txt"
 }
 
 {

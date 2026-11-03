@@ -202,21 +202,21 @@ The region list for `sleep` (`results/e1a-report-sleep.txt`) has the same 30 lin
 
 | # | Workload (32 MB file = 8,192 pages) | Minor | Major | Anon | File | `getrusage()` |
 |---|---|---|---|---|---|---|
-| E2 | 64 MB anonymous, 4 KB pages | 16,519 | 1 | 16,447 | 73 | match |
-| E3 | file, cold cache, `MADV_RANDOM` | 140 | **8,193** | 65 | 8,268 | match |
-| E4 | file, warm cache, `MADV_RANDOM` | 653 | 1 | 67 | 587 | match |
-| E5 | file, cold cache, readahead on | 659 | **2** | 70 | 591 | match |
-| E6 | 64 MB anonymous, THP | 172 | 1 | 99 | 74 | match |
+| E2 | 64 MB anonymous, 4 KB pages | 16,525 | 1 | 16,450 | 76 | match |
+| E3 | file, cold cache, `MADV_RANDOM` | 145 | **8,193** | 71 | 8,267 | match |
+| E4 | file, warm cache, `MADV_RANDOM` | 655 | 1 | 70 | 586 | match |
+| E5 | file, cold cache, readahead on | 654 | **2** | 66 | 590 | match |
+| E6 | 64 MB anonymous, THP | 177 | 1 | 100 | 78 | match |
 
 After the baseline is removed:
 
 | # | Expected | Measured | Explanation |
 |---|---|---|---|
-| E2 | 16,384 minor | 16,447 − 65 ≈ 16,382 | One fault per 4 KB page. |
+| E2 | 16,384 minor | 16,450 − 65 ≈ 16,385 | One fault per 4 KB page. |
 | E3 | 8,192 major | 8,193 − 1 = 8,192 | One disk read per page. |
-| E4 | 8,192 minor if one per page | 587 − 75 ≈ 512 | Fault-around maps 16 cached pages per fault: 8,192 / 16 = 512. |
-| E5 | – | 1 major + about 516 minor | Readahead loads the file after the first major fault. |
-| E6 | 64 MB / 2 MB = 32 | 99 − 65 ≈ 34 | One fault per 2 MB huge page. |
+| E4 | 8,192 minor if one per page | 586 − 75 ≈ 511 | Fault-around maps 16 cached pages per fault: 8,192 / 16 = 512. |
+| E5 | – | 1 major + about 515 minor | Readahead loads the file after the first major fault. |
+| E6 | 64 MB / 2 MB = 32 | 100 − 65 ≈ 35 | One fault per 2 MB huge page. |
 
 ### 6.3 E7 – Timeline (watch mode)
 
@@ -224,12 +224,12 @@ After the baseline is removed:
 
 ```
  time  regions    vsize      rss   minflt  majflt   min/s  maj/s
-  0.0       50  20.0 MB   9.5 MB      510       0       0      0   <- before execve (F6)
-  0.5       16   2.2 MB   1.4 MB      560       1      95      2
-  1.0       17  66.2 MB  24.9 MB    6,556       1   11976      0   <- anon mmap: +1 region, +64 MB, touching
-  1.5       17  66.2 MB  65.4 MB   16,944       1   20738      0   <- all pages touched: RSS follows
-  2.5       18  98.2 MB  97.2 MB   16,944   8,193       0  16366   <- file: +1 region, +8,192 major
-  3.5       16   2.2 MB   1.3 MB   16,944   8,193       0      0   <- free: regions and size drop
+  0.0       51  20.0 MB   9.5 MB      520       0       0      0   <- before execve (F6)
+  0.5       16   2.2 MB   1.4 MB      570       1      99      2
+  1.0       17  66.2 MB   7.9 MB    2,219       1    3257      0   <- anon mmap: +1 region, +64 MB, touching
+  1.5       17  66.2 MB  65.4 MB   16,954       1   29198      0   <- all pages touched: RSS follows
+  2.5       18  98.2 MB  97.2 MB   16,954   8,193       0  16212   <- file: +1 region, +8,192 major
+  3.5       16   2.2 MB   1.3 MB   16,954   8,193       0      0   <- free: regions and size drop
 Regions at exit 16 · size at exit 2.2 MB · peak 98.2 MB · faults match getrusage()
 ```
 
@@ -239,11 +239,11 @@ Address space (`vsize`) grows at `mmap` time. Resident memory (`rss`) grows only
 
 | Command | Regions at exit | Size at exit | Minor | Major | Check |
 |---|---|---|---|---|---|
-| `python3 -c pass` | 35 | 17.2 MB | 1,232 | 0 | match |
-| `sh -c 'ls -R /usr/include'` | 17 | 2.3 MB | 254 | 0 | **differs by −134** |
-| same with `-f` | 17 | 2.3 MB | 396 | 0 | match |
-| `gcc -O2 faultgen.c` | 21 | 6.6 MB | 299 | 0 | **differs by −5,709** |
-| same with `-f` | 21 | 6.6 MB | 5,981 | 0 | match |
+| `python3 -c pass` | 35 | 17.2 MB | 1,231 | 0 | match |
+| `sh -c 'ls -R /usr/include'` | 17 | 2.3 MB | 245 | 0 | **differs by −134** |
+| same with `-f` | 17 | 2.3 MB | 397 | 0 | match |
+| `gcc -O2 faultgen.c` | 21 | 6.6 MB | 304 | 0 | **differs by −5,713** |
+| same with `-f` | 21 | 6.6 MB | 6,001 | 0 | match |
 
 The `gcc` driver itself takes only about 5 % of the faults. The other 95 % happen in `cc1`, `as`, `collect2`, and `ld`.
 
@@ -261,11 +261,11 @@ The list is in the order we found things.
 
 **F5 – Short programs exit before the first sample.** The first version sampled the stats while the child ran. For a 20 ms program it got "0 regions". The fix was the exit kprobe (section 4.3). Now every run reports regions, size at exit, and peak size, for example the 98.2 MB peak in E7.
 
-**F6 – Fork before exec.** The first watch-mode sample in E7 shows 50 regions and 20 MB. That is not `faultgen`. It is the copy of the Python `pfstat` process that `fork()` made, before `execve()` replaced the address space with a new `mm_struct`. An earlier version used this sample as the "peak" by mistake. We dropped sampled peaks and use `hiwater_vm` from the exit snapshot.
+**F6 – Fork before exec.** The first watch-mode sample in E7 shows 51 regions and 20 MB. That is not `faultgen`. It is the copy of the Python `pfstat` process that `fork()` made, before `execve()` replaced the address space with a new `mm_struct`. An earlier version used this sample as the "peak" by mistake. We dropped sampled peaks and use `hiwater_vm` from the exit snapshot.
 
 **F7 – `getrusage()` includes child processes.** `ls` and `gcc` did not match (E8). `wait4()` returns usage for the child *plus all descendants it waited for*, because the kernel adds `cmin_flt` up the tree at reap time. Our probe counted one thread group only. We added follow mode (section 4.4). With `-f`, both match. Without `-f`, `pfstat` prints a hint.
 
-**F8 – `MADV_RANDOM` turns off readahead, not fault-around.** We expected E4 (warm cache, `MADV_RANDOM`) to show one minor fault per page, 8,192. It showed about 512. `should_fault_around()` in 6.8 does not check `VM_RAND_READ`. On a page-cache hit, `do_read_fault()` maps up to `fault_around_bytes` = 64 KB = 16 neighbor pages that are already cached, and 8,192 / 16 = 512. In E3 the cache was cold, so there were no neighbors to map, and every page was a major fault.
+**F8 – `MADV_RANDOM` turns off readahead, not fault-around.** We expected E4 (warm cache, `MADV_RANDOM`) to show one minor fault per page, 8,192. It showed about 511. `should_fault_around()` in 6.8 does not check `VM_RAND_READ`. On a page-cache hit, `do_read_fault()` maps up to `fault_around_bytes` = 64 KB = 16 neighbor pages that are already cached, and 8,192 / 16 = 512. In E3 the cache was cold, so there were no neighbors to map, and every page was a major fault.
 
 **F9 – Readahead turns 8,192 major faults into 1.** E5 is E3 without `MADV_RANDOM`. The first fault starts synchronous readahead. After that, asynchronous readahead stays ahead of the reader, so every later fault finds the page in the cache and is minor (with fault-around, again about 512 of them).
 

@@ -1,5 +1,5 @@
-$ sudo tools/pfstat 213360 --maps
-pfcount report: pid 213360 (sleep)
+$ sudo tools/pfstat 213654 --maps
+pfcount report: pid 213654 (sleep)
   Memory regions (VMAs)                     30   match vs /proc/PID/maps
   Total virtual address space           5.6 MB   match vs /proc/PID/maps
     mm->total_vm                        5.6 MB   match vs VmSize
@@ -17,33 +17,33 @@ pfcount report: pid 213360 (sleep)
     special                         2         12 KB
 
   Regions  (start-end perms size-KB type name)
-    c3ddebbd0000-c3ddebbd5000 r-xp       20 file    /usr/bin/sleep
-    c3ddebbef000-c3ddebbf0000 r--p        4 file    /usr/bin/sleep
-    c3ddebbf0000-c3ddebbf1000 rw-p        4 file    /usr/bin/sleep
-    c3de0a116000-c3de0a137000 rw-p      132 heap    [heap]
-    e1e0b6000000-e1e0b62eb000 r--p     2988 file    /usr/lib/locale/locale-archive
-    e1e0b6417000-e1e0b6470000 r--p      356 file    /usr/lib/locale/C.utf8/LC_CTYPE
-    e1e0b6470000-e1e0b660a000 r-xp     1640 file    /usr/lib/aarch64-linux-gnu/libc.so.6
-    e1e0b660a000-e1e0b661d000 ---p       76 file    /usr/lib/aarch64-linux-gnu/libc.so.6
-    e1e0b661d000-e1e0b6620000 r--p       12 file    /usr/lib/aarch64-linux-gnu/libc.so.6
-    e1e0b6620000-e1e0b6622000 rw-p        8 file    /usr/lib/aarch64-linux-gnu/libc.so.6
-    e1e0b6622000-e1e0b662e000 rw-p       48 anon    
-    e1e0b6635000-e1e0b665c000 r-xp      156 file    /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
-    e1e0b665c000-e1e0b665d000 r--p        4 file    /usr/lib/locale/C.utf8/LC_NUMERIC
-    e1e0b665d000-e1e0b665e000 r--p        4 file    /usr/lib/locale/C.utf8/LC_TIME
-    e1e0b665e000-e1e0b665f000 r--p        4 file    /usr/lib/locale/C.utf8/LC_COLLATE
-    e1e0b665f000-e1e0b6660000 r--p        4 file    /usr/lib/locale/C.utf8/LC_MONETARY
-    e1e0b6660000-e1e0b6661000 r--p        4 file    /usr/lib/locale/C.utf8/LC_MESSAGES/SYS_LC_MESSAGES
-    e1e0b6661000-e1e0b6662000 r--p        4 file    /usr/lib/locale/C.utf8/LC_PAPER
-    e1e0b6662000-e1e0b6663000 r--p        4 file    /usr/lib/locale/C.utf8/LC_NAME
-    e1e0b6663000-e1e0b6664000 r--p        4 file    /usr/lib/locale/C.utf8/LC_ADDRESS
-    e1e0b6664000-e1e0b6665000 r--p        4 file    /usr/lib/locale/C.utf8/LC_TELEPHONE
-    e1e0b6665000-e1e0b6666000 r--p        4 file    /usr/lib/locale/C.utf8/LC_MEASUREMENT
-    e1e0b6666000-e1e0b666d000 r--s       28 file    /usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache
-    e1e0b666d000-e1e0b666e000 r--p        4 file    /usr/lib/locale/C.utf8/LC_IDENTIFICATION
-    e1e0b666e000-e1e0b6670000 rw-p        8 anon    
-    e1e0b6670000-e1e0b6672000 r--p        8 special [vvar]
-    e1e0b6672000-e1e0b6673000 r-xp        4 special [vdso]
-    e1e0b6673000-e1e0b6675000 r--p        8 file    /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
-    e1e0b6675000-e1e0b6677000 rw-p        8 file    /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
-    fffff99b3000-fffff99d4000 rw-p      132 stack   [stack]
+    c0eb9dd90000-c0eb9dd95000 r-xp       20 file    /usr/bin/sleep
+    c0eb9ddaf000-c0eb9ddb0000 r--p        4 file    /usr/bin/sleep
+    c0eb9ddb0000-c0eb9ddb1000 rw-p        4 file    /usr/bin/sleep
+    c0ebb1d3f000-c0ebb1d60000 rw-p      132 heap    [heap]
+    ecca60c00000-ecca60eeb000 r--p     2988 file    /usr/lib/locale/locale-archive
+    ecca60f27000-ecca60f80000 r--p      356 file    /usr/lib/locale/C.utf8/LC_CTYPE
+    ecca60f80000-ecca6111a000 r-xp     1640 file    /usr/lib/aarch64-linux-gnu/libc.so.6
+    ecca6111a000-ecca6112d000 ---p       76 file    /usr/lib/aarch64-linux-gnu/libc.so.6
+    ecca6112d000-ecca61130000 r--p       12 file    /usr/lib/aarch64-linux-gnu/libc.so.6
+    ecca61130000-ecca61132000 rw-p        8 file    /usr/lib/aarch64-linux-gnu/libc.so.6
+    ecca61132000-ecca6113e000 rw-p       48 anon    
+    ecca6114c000-ecca61173000 r-xp      156 file    /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+    ecca61173000-ecca61174000 r--p        4 file    /usr/lib/locale/C.utf8/LC_NUMERIC
+    ecca61174000-ecca61175000 r--p        4 file    /usr/lib/locale/C.utf8/LC_TIME
+    ecca61175000-ecca61176000 r--p        4 file    /usr/lib/locale/C.utf8/LC_COLLATE
+    ecca61176000-ecca61177000 r--p        4 file    /usr/lib/locale/C.utf8/LC_MONETARY
+    ecca61177000-ecca61178000 r--p        4 file    /usr/lib/locale/C.utf8/LC_MESSAGES/SYS_LC_MESSAGES
+    ecca61178000-ecca61179000 r--p        4 file    /usr/lib/locale/C.utf8/LC_PAPER
+    ecca61179000-ecca6117a000 r--p        4 file    /usr/lib/locale/C.utf8/LC_NAME
+    ecca6117a000-ecca6117b000 r--p        4 file    /usr/lib/locale/C.utf8/LC_ADDRESS
+    ecca6117b000-ecca6117c000 r--p        4 file    /usr/lib/locale/C.utf8/LC_TELEPHONE
+    ecca6117c000-ecca6117d000 r--p        4 file    /usr/lib/locale/C.utf8/LC_MEASUREMENT
+    ecca6117d000-ecca61184000 r--s       28 file    /usr/lib/aarch64-linux-gnu/gconv/gconv-modules.cache
+    ecca61184000-ecca61185000 r--p        4 file    /usr/lib/locale/C.utf8/LC_IDENTIFICATION
+    ecca61185000-ecca61187000 rw-p        8 anon    
+    ecca61187000-ecca61189000 r--p        8 special [vvar]
+    ecca61189000-ecca6118a000 r-xp        4 special [vdso]
+    ecca6118a000-ecca6118c000 r--p        8 file    /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+    ecca6118c000-ecca6118e000 rw-p        8 file    /usr/lib/aarch64-linux-gnu/ld-linux-aarch64.so.1
+    ffffcf7f5000-ffffcf816000 rw-p      132 stack   [stack]

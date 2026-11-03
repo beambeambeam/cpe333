@@ -1,14 +1,14 @@
 $ sudo tools/pfstat -- tests/faultgen filewarm:/tmp/pfcount-big.bin
-[faultgen 213375] start                        minflt=538 majflt=1
-[faultgen 213375] filewarm 32768 KB (8192 pages) minflt=1062 majflt=1
-[faultgen 213375] done                         minflt=1062 majflt=1
+[faultgen 213669] start                        minflt=546 majflt=1
+[faultgen 213669] filewarm 32768 KB (8192 pages) minflt=1070 majflt=1
+[faultgen 213669] done                         minflt=1070 majflt=1
 
-pfcount run: tests/faultgen filewarm:/tmp/pfcount-big.bin  (pid 213375, 0.01s, exit 0)
+pfcount run: tests/faultgen filewarm:/tmp/pfcount-big.bin  (pid 213669, 0.01s, exit 0)
   Memory regions at exit                    17
   Virtual address space at exit        34.2 MB
   Peak virtual address space           34.2 MB
-  Minor page faults                        653   match vs getrusage()
+  Minor page faults                        655   match vs getrusage()
   Major page faults                          1   match vs getrusage()
-    on anonymous memory                     67
-    on file-backed memory                  587
+    on anonymous memory                     70
+    on file-backed memory                  586
   fault scope: process only
