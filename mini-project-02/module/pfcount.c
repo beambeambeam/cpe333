@@ -63,8 +63,10 @@ MODULE_PARM_DESC(follow, "Also count faults of the target's descendants");
 struct pf_session {
 	struct rcu_head rcu;
 	refcount_t ref;
-	struct pid *pid;		/* the selected process */
-	pid_t tgid;
+	/* Thread-group pid of the target. The reference keeps this struct pid
+	 * alive, so a new process that reuses the number gets a different
+	 * struct pid and never matches. */
+	struct pid *pid;
 	u64 since_ns;
 	atomic64_t minor, major, anon, file, error;
 	/* Snapshot taken by the do_exit() probe. */
@@ -115,19 +117,19 @@ struct fault_ctx {
 
 /* True if current belongs to the target, or descends from it in follow mode.
  * Caller holds rcu_read_lock(). */
-static bool is_tracked(pid_t tgid)
+static bool is_tracked(struct pid *tg)
 {
 	struct task_struct *t;
 	int depth = 0;
 
-	if (current->tgid == tgid)
+	if (task_tgid(current) == tg)
 		return true;
 	if (!READ_ONCE(follow))
 		return false;
 
 	for (t = current; t->pid > 1 && depth < 64; depth++) {
 		t = rcu_dereference(t->real_parent);
-		if (t->tgid == tgid)
+		if (task_tgid(t) == tg)
 			return true;
 	}
 	return false;
@@ -143,7 +145,7 @@ static int fault_entry(struct kretprobe_instance *ri, struct pt_regs *regs)
 
 	rcu_read_lock();
 	s = rcu_dereference(cur_session);
-	if (!s || !is_tracked(s->tgid) || !refcount_inc_not_zero(&s->ref)) {
+	if (!s || !is_tracked(s->pid) || !refcount_inc_not_zero(&s->ref)) {
 		rcu_read_unlock();
 		return 1; /* not our process: skip the return handler */
 	}
@@ -198,7 +200,7 @@ static int exit_pre(struct kprobe *p, struct pt_regs *regs)
 
 	rcu_read_lock();
 	s = rcu_dereference(cur_session);
-	if (s && current->tgid == s->tgid && mm &&
+	if (s && task_tgid(current) == s->pid && mm &&
 	    atomic_read(&current->signal->live) == 1) {
 		s->exit_regions = READ_ONCE(mm->map_count);
 		s->exit_vm = READ_ONCE(mm->total_vm);
@@ -228,14 +230,15 @@ static int set_target(int nr)
 		s = kzalloc(sizeof(*s), GFP_KERNEL);
 		if (!s)
 			return -ENOMEM;
-		s->pid = find_get_pid(nr);
-		task = s->pid ? get_pid_task(s->pid, PIDTYPE_PID) : NULL;
+		struct pid *p = find_get_pid(nr);
+
+		task = p ? get_pid_task(p, PIDTYPE_PID) : NULL;
+		put_pid(p);
 		if (!task) {
-			put_pid(s->pid);
 			kfree(s);
 			return -ESRCH;
 		}
-		s->tgid = task->tgid;
+		s->pid = get_pid(task_tgid(task));
 		put_task_struct(task);
 		refcount_set(&s->ref, 1);	/* owned by cur_session */
 		s->since_ns = ktime_get_ns();
@@ -315,7 +318,7 @@ static int stats_show(struct seq_file *m, void *v)
 	}
 
 	seq_printf(m, "pid: %d\n", pid_nr(s->pid));
-	task = get_pid_task(s->pid, PIDTYPE_PID);
+	task = get_pid_task(s->pid, PIDTYPE_TGID);
 	if (!task) {
 		seq_puts(m, "state: exited\n");
 		if (smp_load_acquire(&s->exit_valid)) {
@@ -410,7 +413,7 @@ static int maps_show(struct seq_file *m, void *v)
 
 	if (!s)
 		return 0;
-	task = get_pid_task(s->pid, PIDTYPE_PID);
+	task = get_pid_task(s->pid, PIDTYPE_TGID);
 	session_put(s);
 	if (!task)
 		return 0;

@@ -29,7 +29,30 @@ check_retarget() {
 	[ $bad = 0 ] && pass retarget || fail retarget "$bad/50 trials: stopped B got live_min_flt=$last"
 }
 
-CHECKS=${*:-retarget}
+# Target P exits. A new process reuses number P. P's counters must not move.
+check_pidreuse() {
+	for try in 1 2 3 4 5; do
+		tests/faultgen sleep:1 >/dev/null & P=$!
+		echo $P > $T/target
+		wait $P
+		before=$(stat_of live_min_flt)
+		echo $((P - 1)) > /proc/sys/kernel/ns_last_pid
+		tests/faultgen anon:16 >/dev/null & Q=$!
+		wait $Q
+		[ $Q = $P ] || continue		# another process took the number
+		after=$(stat_of live_min_flt)
+		state=$(stat_of state)
+		if [ "$after" = "$before" ] && [ "$state" = exited ]; then
+			pass "pidreuse (pid $P reused)"
+		else
+			fail pidreuse "pid $P reused: live_min_flt $before -> $after, state=$state"
+		fi
+		return
+	done
+	fail pidreuse "could not force PID reuse"
+}
+
+CHECKS=${*:-retarget pidreuse}
 for c in $CHECKS; do "check_$c"; done
 echo 0 > $T/target
 exit $FAIL
