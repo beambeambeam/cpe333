@@ -17,8 +17,9 @@
  *               anonymous/file-backed. Uses the same major/minor rule as
  *               mm_account_fault() in mm/memory.c.
  *
- * A kprobe on do_exit() saves the region count and address-space size when
- * the target's last thread exits, so short-lived programs still get a result.
+ * A kprobe on acct_collect(), called from do_exit(), saves the region count
+ * and address-space size when the target's last thread exits, so short-lived
+ * programs still get a result.
  *
  * Module parameter "follow" (writable in /sys/module/pfcount/parameters/)
  * makes the live counters also include the target's descendant processes,
@@ -69,7 +70,7 @@ struct pf_session {
 	struct pid *pid;
 	u64 since_ns;
 	atomic64_t minor, major, anon, file, error;
-	/* Snapshot taken by the do_exit() probe. */
+	/* Snapshot taken by the acct_collect() probe. */
 	bool exit_valid;
 	int exit_regions;
 	unsigned long exit_vm, exit_peak_vm;	/* pages */
@@ -191,17 +192,23 @@ static struct kretprobe fault_probe = {
 	.maxactive	= 64,
 };
 
-/* do_exit() runs before exit_mm(), so current->mm is still valid here. The
- * probe runs in atomic context: read the counters without mmap_lock. */
+/*
+ * acct_collect(long exitcode, int group_dead) is called by do_exit() after
+ * group_dead = atomic_dec_and_test(&signal->live) and before exit_mm(). So
+ * exactly one thread per group sees group_dead == 1, and current->mm is still
+ * valid. The probe runs in atomic context: read counters, not the VMA tree.
+ */
 static int exit_pre(struct kprobe *p, struct pt_regs *regs)
 {
 	struct mm_struct *mm = current->mm;
 	struct pf_session *s;
 
+	if (!regs_get_kernel_argument(regs, 1))
+		return 0; /* not the last thread of the group */
+
 	rcu_read_lock();
 	s = rcu_dereference(cur_session);
-	if (s && task_tgid(current) == s->pid && mm &&
-	    atomic_read(&current->signal->live) == 1) {
+	if (s && task_tgid(current) == s->pid && mm) {
 		s->exit_regions = READ_ONCE(mm->map_count);
 		s->exit_vm = READ_ONCE(mm->total_vm);
 		s->exit_peak_vm = max(READ_ONCE(mm->hiwater_vm), s->exit_vm);
@@ -212,7 +219,7 @@ static int exit_pre(struct kprobe *p, struct pt_regs *regs)
 }
 
 static struct kprobe exit_probe = {
-	.symbol_name	= "do_exit",
+	.symbol_name	= "acct_collect",
 	.pre_handler	= exit_pre,
 };
 
@@ -519,7 +526,7 @@ static int __init pfcount_init(void)
 	}
 	ret = register_kprobe(&exit_probe);
 	if (ret) {
-		pr_err("pfcount: register_kprobe(do_exit) failed: %d\n", ret);
+		pr_err("pfcount: register_kprobe(acct_collect) failed: %d\n", ret);
 		unregister_kretprobe(&fault_probe);
 		return ret;
 	}

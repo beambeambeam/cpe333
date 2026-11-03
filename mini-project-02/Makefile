@@ -8,9 +8,11 @@ all: module faultgen
 module:
 	$(MAKE) -C module
 
-faultgen: tests/faultgen
+faultgen: tests/faultgen tests/threadexit
 tests/faultgen: tests/faultgen.c
 	$(CC) -O2 -Wall -o $@ $<
+tests/threadexit: tests/threadexit.c
+	$(CC) -O2 -Wall -pthread -o $@ $<
 
 load: module
 	sudo insmod module/pfcount.ko

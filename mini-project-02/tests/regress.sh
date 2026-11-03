@@ -52,7 +52,20 @@ check_pidreuse() {
 	fail pidreuse "could not force PID reuse"
 }
 
-CHECKS=${*:-retarget pidreuse}
+# Eight threads exit at the same time after main's pthread_exit(). The exit
+# snapshot must be taken every time.
+check_threadexit() {
+	miss=0
+	for i in $(seq 1 100); do
+		tests/threadexit & P=$!
+		echo $P > $T/target
+		wait $P
+		grep -q '^exit_regions:' $T/stats || miss=$((miss + 1))
+	done
+	[ $miss = 0 ] && pass "threadexit (100 runs)" || fail threadexit "$miss/100 runs had no exit snapshot"
+}
+
+CHECKS=${*:-retarget pidreuse threadexit}
 for c in $CHECKS; do "check_$c"; done
 echo 0 > $T/target
 exit $FAIL

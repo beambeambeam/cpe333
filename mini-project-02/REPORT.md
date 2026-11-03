@@ -66,7 +66,7 @@ flowchart LR
       S --> W["walk VMAs<br/>get_task_mm + mmap_read_lock"]
       S --> L["lifetime faults<br/>sum task->min_flt / maj_flt"]
       K["kretprobe<br/>handle_mm_fault()"] --> C[live counters]
-      X["kprobe<br/>do_exit()"] --> E[exit snapshot]
+      X["kprobe<br/>acct_collect()"] --> E[exit snapshot]
       S --> C
       S --> E
     end
@@ -114,7 +114,7 @@ All three `/proc/pfcount` files are root-only (`0600`/`0400`). The module can se
 
 ### 4.3 Short-lived processes: exit snapshot
 
-A program like `python3 -c pass` exits in about 20 ms, before the CLI can read the stats once. A kprobe on `do_exit()` fixes this. `do_exit()` runs before `exit_mm()`, so `current->mm` is still valid. When the last thread of the target exits (`signal->live == 1`), the probe saves:
+A program like `python3 -c pass` exits in about 20 ms, before the CLI can read the stats once. A kprobe on `acct_collect()` fixes this. `do_exit()` calls it before `exit_mm()`, so `current->mm` is still valid. Its `group_dead` argument comes from `atomic_dec_and_test(&signal->live)`, so it is true for exactly one thread: the last one to exit. An earlier version probed `do_exit()` and read `signal->live == 1`. That read is racy: when two threads exit at the same time, both can see `live == 0` and no thread takes the snapshot. On the last thread of the target, the probe saves:
 
 - `mm->map_count` – the number of VMAs, kept by the kernel
 - `mm->total_vm` – the size at exit
@@ -257,7 +257,7 @@ The list is in the order we found things.
 
 **F4 – Path case.** The repo path on macOS is `Y3/`, but a shell had `cd`'d into `y3/`. APFS ignores case, so this works on the Mac. The VM mount is case-sensitive, so `limactl shell --workdir` failed. `pwd -P` in `/bin/sh` keeps the typed case, but `realpath` returns the on-disk case. `vm.sh` now uses `realpath`.
 
-**F5 – Short programs exit before the first sample.** The first version sampled the stats while the child ran. For a 20 ms program it got "0 regions". The fix was the `do_exit()` kprobe (section 4.3). Now every run reports regions, size at exit, and peak size, for example the 98.2 MB peak in E7.
+**F5 – Short programs exit before the first sample.** The first version sampled the stats while the child ran. For a 20 ms program it got "0 regions". The fix was the exit kprobe (section 4.3). Now every run reports regions, size at exit, and peak size, for example the 98.2 MB peak in E7.
 
 **F6 – Fork before exec.** The first watch-mode sample in E7 shows 51 regions and 20 MB. That is not `faultgen`. It is the copy of the Python `pfstat` process that `fork()` made, before `execve()` replaced the address space with a new `mm_struct`. An earlier version used this sample as the "peak" by mistake. We dropped sampled peaks and use `hiwater_vm` from the exit snapshot.
 
@@ -313,7 +313,7 @@ The experiments also show how page-cache state, readahead, fault-around, and hug
 
 ## Appendix B – References
 
-- Linux source: `mm/memory.c` (`handle_mm_fault`, `mm_account_fault`, `do_read_fault`, `should_fault_around`), `fs/proc/task_mmu.c` (`/proc/<pid>/maps`), `fs/proc/array.c` (`/proc/<pid>/stat`), `kernel/exit.c` (`do_exit`).
+- Linux source: `mm/memory.c` (`handle_mm_fault`, `mm_account_fault`, `do_read_fault`, `should_fault_around`), `fs/proc/task_mmu.c` (`/proc/<pid>/maps`), `fs/proc/array.c` (`/proc/<pid>/stat`), `kernel/exit.c` (`do_exit`), `kernel/acct.c` (`acct_collect`).
 - [Process Addresses – kernel docs](https://docs.kernel.org/mm/process_addrs.html)
 - [Tracepoints – kernel docs](https://docs.kernel.org/trace/tracepoints.html)
 - [Kernel Probes (Kprobes) – kernel docs](https://docs.kernel.org/trace/kprobes.html)
