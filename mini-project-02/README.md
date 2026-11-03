@@ -85,4 +85,4 @@ faultgen sleep:1 anon:64 sleep:1 file:/tmp/pfcount-big.bin sleep:1 free sleep:1
 - `file:...` evicts a 32 MB file from the page cache, maps it, and reads each page. `MADV_RANDOM` turns off readahead. Expect about 8,192 major faults.
 - `free` unmaps both, and the region count drops.
 
-`pfstat` prints one line per interval while it runs. At the end it compares its totals with `getrusage()` for the child.
+`pfstat` prints one line per interval while it runs. At the end it compares its totals with `getrusage()` for the child. With `-f`, `wait4()` covers only descendants that were reaped by a `wait()`, so a higher pfcount total is expected when children are auto-reaped (`SIGCHLD` ignored).

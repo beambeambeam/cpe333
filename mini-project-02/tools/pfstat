@@ -103,6 +103,15 @@ def check(mine, ref):
     return bad(f"differs by {mine - ref:+d}")
 
 
+def follow_check(mine, ref):
+    """wait4() only adds descendants that were reaped by a wait(). Children
+    auto-reaped (SIGCHLD ignored) or reparented away are missing from it,
+    so in follow mode only a count below the reference is a real error."""
+    if mine > ref:
+        return c("33", f"+{mine - ref} above")
+    return check(mine, ref)
+
+
 def print_report(s, ref=None):
     print(bold(f"pfcount report: pid {s['pid']} ({s.get('comm', '?')})"))
     if s["state"] != "running":
@@ -237,6 +246,8 @@ def cmd_run(argv, interval, follow):
     exp_min = ru.ru_minflt - base["min_flt"]
     exp_maj = ru.ru_majflt - base["maj_flt"]
     scope = "process + descendants" if follow else "process only"
+    chk, ref_name = (follow_check, "wait4(), waited descendants only") if follow \
+        else (check, "getrusage()")
 
     print(bold(f"\npfcount run: {' '.join(argv)}  (pid {child}, "
                f"{elapsed:.2f}s, exit {os.waitstatus_to_exitcode(status)})"))
@@ -245,9 +256,9 @@ def cmd_run(argv, interval, follow):
         print(f"  {'Virtual address space at exit':<30}{human_kb(end['exit_vsize_kb']):>14}")
         print(f"  {'Peak virtual address space':<30}{human_kb(end['peak_vsize_kb']):>14}")
     print(f"  {'Minor page faults':<30}{end['live_min_flt']:>14,}   "
-          + check(end["live_min_flt"], exp_min) + dim(" vs getrusage()"))
+          + chk(end["live_min_flt"], exp_min) + dim(f" vs {ref_name}"))
     print(f"  {'Major page faults':<30}{end['live_maj_flt']:>14,}   "
-          + check(end["live_maj_flt"], exp_maj) + dim(" vs getrusage()"))
+          + chk(end["live_maj_flt"], exp_maj) + dim(f" vs {ref_name}"))
     print(f"  {'  on anonymous memory':<30}{end['live_anon_flt']:>14,}")
     print(f"  {'  on file-backed memory':<30}{end['live_file_flt']:>14,}")
     if end["live_err_flt"]:
@@ -255,6 +266,9 @@ def cmd_run(argv, interval, follow):
     print(dim(f"  fault scope: {scope}"))
     if not follow and end["live_min_flt"] != exp_min:
         print(dim("  getrusage() includes child processes: use -f to count them too"))
+    if follow and (end["live_min_flt"] > exp_min or end["live_maj_flt"] > exp_maj):
+        print(dim("  pfcount counts every descendant. wait4() misses descendants that\n"
+                  "  nobody waited for (SIGCHLD ignored, or reparented after a parent exit)"))
     if end["probe_missed"]:
         print(bad(f"  kretprobe missed {end['probe_missed']} faults"))
     set_target(0)

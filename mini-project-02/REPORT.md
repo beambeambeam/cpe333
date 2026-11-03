@@ -126,6 +126,8 @@ A kprobe handler runs in atomic context and cannot sleep, so it cannot take `mma
 
 `getrusage()` for a child that was waited on includes the faults of that child's own children (see finding F7). When the module parameter `follow` is 1, the probe also counts a fault if any ancestor of `current` (through `real_parent`, at most 64 levels) belongs to the target. `pfstat -f` turns this on.
 
+The two sides do not count the same set of processes. The probe counts every descendant. `wait4()` counts only descendants that some process reaped with `wait()`. So in follow mode `pfstat` labels the reference "waited descendants only". A count above it is shown in yellow with a note, not as an error. Only a count below it is an error.
+
 ### 4.5 User interface
 
 | Command | Result |
@@ -276,10 +278,13 @@ The list is in the order we found things.
 - `kretprobe.nmissed` stayed 0 in all runs, with `maxactive = 64`.
 - Loading the module logs "module verification failed … tainting kernel". This is normal for an unsigned out-of-tree module.
 
+**F12 – `wait4()` is not a full reference for follow mode.** A reviewer found a case where `-f` reported more faults than `wait4()`: a Python parent sets `SIGCHLD` to `SIG_IGN` and forks a child that touches 16 MB. The kernel reaps that child automatically, and `wait_task_zombie()` never adds its counts to the parent's `cmin_flt`. We reproduced it: pfcount 6,579 minor faults, `wait4()` 2,080 (+4,499, about 16 MB / 4 KB). The probe was right. The reference was missing the auto-reaped child. `pfstat -f` now names the reference "waited descendants only" and explains a positive difference.
+
 ## 8. Limitations
 
 - Live counts start when the target is selected. Use run mode (`pfstat -- CMD`) to see a program's full life.
 - Follow mode tracks descendants through `real_parent`. A grandchild whose parent exits first is reparented to init (or a subreaper) and is no longer counted. `getrusage()` also loses it.
+- In follow mode, `wait4()` is only a lower bound. Children that are auto-reaped (`SIGCHLD` ignored or `SA_NOCLDWAIT`) are counted by the probe but not by `wait4()` (F12). We have no independent reference with the same scope.
 - The kretprobe runs for every page fault on the system and returns early for other processes. We did not measure this overhead.
 - The exit snapshot uses counter fields without `mmap_lock`. That is safe for the last thread at exit, but it gives no per-VMA detail.
 - PIDs are resolved in the writer's PID namespace. We tested only in the initial namespace.
