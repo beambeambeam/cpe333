@@ -101,6 +101,8 @@ The module also reads `mm->total_vm` as a second check, because that is the sour
 
 `/proc/pfcount/maps` prints the same VMA list as `/proc/<pid>/maps`, with an extra size and group column.
 
+All three `/proc/pfcount` files are root-only (`0600`/`0400`). The module can select any process, so a world-readable file would let a normal user read the layout of a process whose own `/proc/<pid>/maps` they cannot open, for example PID 1.
+
 ### 4.2 Fault counts: two sources
 
 **Lifetime counts** show all faults since the process started. The module adds `task->min_flt` and `task->maj_flt` for every live thread and adds `signal->min_flt` and `signal->maj_flt` for threads that already exited. `/proc/<pid>/stat` uses the same sum, so the two must be equal.

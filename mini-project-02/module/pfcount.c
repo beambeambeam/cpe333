@@ -2,9 +2,12 @@
 /*
  * pfcount - per-process page-fault counter and address-space inspector.
  *
- * /proc/pfcount/target  (rw)  write a PID to start monitoring, "0" to stop
- * /proc/pfcount/stats   (r)   region count, address-space size, fault counts
- * /proc/pfcount/maps    (r)   VMA list of the target, like /proc/<pid>/maps
+ * /proc/pfcount/target  (root rw)  write a PID to start monitoring, "0" to stop
+ * /proc/pfcount/stats   (root r)   region count, address-space size, fault counts
+ * /proc/pfcount/maps    (root r)   VMA list of the target, like /proc/<pid>/maps
+ *
+ * All files are root-only. They expose any selected process, including ones
+ * whose own /proc/<pid>/maps the reader could not open.
  *
  * Two fault sources:
  *   lifetime  - task->min_flt / maj_flt summed over all threads, the same
@@ -491,9 +494,9 @@ static int __init pfcount_init(void)
 
 	pf_dir = proc_mkdir("pfcount", NULL);
 	if (!pf_dir ||
-	    !proc_create("target", 0644, pf_dir, &target_ops) ||
-	    !proc_create("stats", 0444, pf_dir, &stats_ops) ||
-	    !proc_create("maps", 0444, pf_dir, &maps_ops)) {
+	    !proc_create("target", 0600, pf_dir, &target_ops) ||
+	    !proc_create("stats", 0400, pf_dir, &stats_ops) ||
+	    !proc_create("maps", 0400, pf_dir, &maps_ops)) {
 		ret = -ENOMEM;
 		goto err;
 	}

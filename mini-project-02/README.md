@@ -48,12 +48,12 @@ sudo tools/pfstat -f -- <cmd> [args...]  # same, plus faults of cmd's child proc
 make unload
 ```
 
-Raw interface:
+Raw interface (root only: the files can show any process, so normal users cannot read them):
 
 ```sh
 echo <pid> | sudo tee /proc/pfcount/target
-cat /proc/pfcount/stats
-cat /proc/pfcount/maps
+sudo cat /proc/pfcount/stats
+sudo cat /proc/pfcount/maps
 echo 1 | sudo tee /sys/module/pfcount/parameters/follow   # include descendants
 ```
 
