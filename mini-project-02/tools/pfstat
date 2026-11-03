@@ -157,11 +157,16 @@ WATCH_HDR = (f"{'time':>8} {'regions':>8} {'vsize':>11} {'rss':>11} "
              f"{'minflt':>11} {'majflt':>9} {'min/s':>9} {'maj/s':>8}")
 
 
-def watch_line(s, prev, dt, t0):
-    dmin = (s["min_flt"] - prev["min_flt"]) / dt if prev else 0
-    dmaj = (s["maj_flt"] - prev["maj_flt"]) / dt if prev else 0
+def watch_line(s, t, prev, t0):
+    """s: stats read at monotonic time t. prev: the previous (stats, time)."""
+    dmin = dmaj = 0
+    if prev:
+        ps, pt = prev
+        dt = t - pt  # measured: sleep() and the stats read can take longer
+        dmin = (s["min_flt"] - ps["min_flt"]) / dt
+        dmaj = (s["maj_flt"] - ps["maj_flt"]) / dt
     hl = (lambda x: c("33", x)) if (dmin or dmaj) else str
-    return hl(f"{time.monotonic() - t0:8.1f} {s['regions']:>8} "
+    return hl(f"{t - t0:8.1f} {s['regions']:>8} "
               f"{human_kb(s['vsize_kb']):>11} {human_kb(s['rss_kb']):>11} "
               f"{s['min_flt']:>11,} {s['maj_flt']:>9,} {dmin:>9.0f} {dmaj:>8.0f}")
 
@@ -174,14 +179,14 @@ def cmd_watch(pid, interval):
     prev, n = None, 0
     try:
         while True:
-            s = read_stats()
+            s, t = read_stats(), time.monotonic()
             if s["state"] != "running":
                 print(f"process {s['state']}")
                 break
             if n % 20 == 0:
                 print(dim(WATCH_HDR))
-            print(watch_line(s, prev, interval, t0))
-            prev, n = s, n + 1
+            print(watch_line(s, t, prev, t0))
+            prev, n = (s, t), n + 1
             time.sleep(interval)
     except KeyboardInterrupt:
         print()
@@ -219,12 +224,12 @@ def cmd_run(argv, interval, follow):
         if wpid:
             break
         if interval:
-            s = read_stats()
+            s, t = read_stats(), time.monotonic()
             if s["state"] == "running":
                 if n % 20 == 0:
                     print(dim(WATCH_HDR))
-                print(watch_line(s, prev, interval, t0))
-                prev, n = s, n + 1
+                print(watch_line(s, t, prev, t0))
+                prev, n = (s, t), n + 1
         time.sleep(interval or 0.01)
 
     end = read_stats()
