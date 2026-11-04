@@ -1,5 +1,7 @@
 # Run inside the Linux VM (./vm.sh shell, or ./vm.sh make <target> from macOS).
 BIG := /tmp/pfcount-big.bin
+PTHREAD_BINS := tests/threadexit tests/threadchurn tests/uffdblock
+TEST_BINS := tests/faultgen $(PTHREAD_BINS)
 
 .PHONY: all module faultgen load unload reload demo experiments clean
 
@@ -8,10 +10,10 @@ all: module faultgen
 module:
 	$(MAKE) -C module
 
-faultgen: tests/faultgen tests/threadexit tests/threadchurn tests/uffdblock
+faultgen: $(TEST_BINS)
 tests/faultgen: tests/faultgen.c
 	$(CC) -O2 -Wall -o $@ $<
-tests/threadexit tests/threadchurn tests/uffdblock: %: %.c
+$(PTHREAD_BINS): %: %.c
 	$(CC) -O2 -Wall -pthread -o $@ $<
 
 load: module
@@ -38,4 +40,4 @@ experiments:
 
 clean:
 	$(MAKE) -C module clean
-	rm -f tests/faultgen $(BIG)
+	rm -f $(TEST_BINS) $(BIG)
