@@ -245,8 +245,13 @@ static int set_target(int nr)
 			kfree(s);
 			return -ESRCH;
 		}
-		s->pid = get_pid(task_tgid(task));
+		/* Reads and refs the tgid under RCU: the task may be reaped now. */
+		s->pid = get_task_pid(task, PIDTYPE_TGID);
 		put_task_struct(task);
+		if (!s->pid) {
+			kfree(s);
+			return -ESRCH;
+		}
 		refcount_set(&s->ref, 1);	/* owned by cur_session */
 		s->since_ns = ktime_get_ns();
 	}
