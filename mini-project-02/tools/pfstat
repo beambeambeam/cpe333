@@ -208,8 +208,13 @@ def set_follow(on):
 
 
 def cmd_run(argv, interval, follow):
+    # An inherited SIGCHLD=SIG_IGN makes the kernel reap the child itself, so
+    # wait4() fails and gives no rusage. Use the default action here, and give
+    # the command its inherited setting back before exec.
+    inherited = signal.signal(signal.SIGCHLD, signal.SIG_DFL)
     child = os.fork()
     if child == 0:
+        signal.signal(signal.SIGCHLD, inherited)
         os.kill(os.getpid(), signal.SIGSTOP)  # wait until the parent targets us
         if os.getuid() == 0 and "SUDO_UID" in os.environ:
             os.setgroups([])
@@ -276,14 +281,16 @@ def cmd_run(argv, interval, follow):
         if end["probe_missed"]:
             print(bad(f"  kretprobe missed {end['probe_missed']} faults"))
     finally:
-        if not reaped:  # error or Ctrl-C before the child exited
-            try:
-                os.kill(child, signal.SIGKILL)
-                os.waitpid(child, 0)
-            except ChildProcessError:
-                pass
-        set_target(0)
-        set_follow(False)
+        try:
+            if not reaped:  # error or Ctrl-C before the child exited
+                try:
+                    os.kill(child, signal.SIGKILL)
+                    os.waitpid(child, 0)
+                except (ProcessLookupError, ChildProcessError):
+                    pass  # already gone
+        finally:
+            set_target(0)
+            set_follow(False)
 
 
 def interval(text):
