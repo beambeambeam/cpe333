@@ -18,7 +18,7 @@ It also checks each number against `/proc/<pid>/maps`, `/proc/<pid>/stat` and `g
 | `module/pfcount.c` | Kernel module. Walks the VMAs and counts faults. |
 | `tools/pfstat` | Python CLI: report, watch, and run modes. |
 | `tests/faultgen.c` | Test program that causes a known number of faults. |
-| `tests/threadexit.c`, `tests/regress.sh` | Regression checks for the module (`sudo sh tests/regress.sh`). |
+| `tests/regress.sh` | Regression checks for the module (`sudo sh tests/regress.sh`). `tests/threadexit.c`, `threadchurn.c`, `uffdblock.c` are its helpers. |
 | `scripts/experiments.sh` | Runs every experiment in the report, output to `results/`. |
 | `results/` | Raw output of the last experiment run. |
 | `Makefile` | Build, load, demo, and experiments targets. Runs inside Linux. |

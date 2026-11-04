@@ -86,7 +86,23 @@ PY
 	[ "$out" = 0 ] && pass "lifetime (20000 reads)" || fail lifetime "min_flt went down $out times in 20000 reads"
 }
 
-CHECKS=${*:-retarget pidreuse threadexit lifetime}
+# A fault is blocked in handle_mm_fault() (userfaultfd) while the module is
+# unloaded. Its kretprobe instance is canceled, so fault_return() never puts
+# the session. Unload must still free that session.
+check_unload() {
+	tests/uffdblock & P=$!
+	echo $P > $T/target
+	sleep 0.5
+	echo 0 > $T/target
+	rmmod pfcount
+	freed=$(dmesg | tail -5 | grep -c "freed 1 session(s) held by canceled probes")
+	kill -9 $P; wait $P 2>/dev/null
+	insmod module/pfcount.ko
+	[ "$freed" = 1 ] && pass "unload (blocked fault's session freed)" ||
+		fail unload "no 'freed 1 session' message after rmmod"
+}
+
+CHECKS=${*:-retarget pidreuse threadexit lifetime unload}
 for c in $CHECKS; do "check_$c"; done
 echo 0 > $T/target
 exit $FAIL

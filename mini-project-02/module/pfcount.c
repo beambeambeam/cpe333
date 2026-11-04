@@ -27,6 +27,7 @@
  */
 #include <linux/atomic.h>
 #include <linux/kprobes.h>
+#include <linux/list.h>
 #include <linux/ktime.h>
 #include <linux/mm.h>
 #include <linux/mmap_lock.h>
@@ -40,6 +41,7 @@
 #include <linux/refcount.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
 #include <linux/uaccess.h>
 
 MODULE_LICENSE("GPL");
@@ -63,6 +65,7 @@ MODULE_PARM_DESC(follow, "Also count faults of the target's descendants");
  */
 struct pf_session {
 	struct rcu_head rcu;
+	struct list_head node;	/* on all_sessions until freed */
 	refcount_t ref;
 	/* Thread-group pid of the target. The reference keeps this struct pid
 	 * alive, so a new process that reuses the number gets a different
@@ -79,12 +82,24 @@ struct pf_session {
 static DEFINE_MUTEX(target_lock);		/* serializes set_target() */
 static struct pf_session __rcu *cur_session;
 
+/*
+ * Every session that is not freed yet. unregister_kretprobe() drops
+ * instances that are still inside handle_mm_fault() (for example, blocked
+ * on userfaultfd) without calling fault_return(), so their session
+ * references are never put. pfcount_exit() frees what is left here.
+ */
+static LIST_HEAD(all_sessions);
+static DEFINE_SPINLOCK(sessions_lock);
+
 static struct proc_dir_entry *pf_dir;
 
 static void session_free_rcu(struct rcu_head *head)
 {
 	struct pf_session *s = container_of(head, struct pf_session, rcu);
 
+	spin_lock_bh(&sessions_lock);
+	list_del(&s->node);
+	spin_unlock_bh(&sessions_lock);
 	put_pid(s->pid);
 	kfree(s);
 }
@@ -183,7 +198,7 @@ out:
 }
 
 /* An instance still in flight at unregister time never reaches
- * fault_return(), so its session reference leaks at module unload. */
+ * fault_return(). pfcount_exit() frees the sessions it still holds. */
 static struct kretprobe fault_probe = {
 	.kp.symbol_name	= "handle_mm_fault",
 	.entry_handler	= fault_entry,
@@ -254,6 +269,9 @@ static int set_target(int nr)
 		}
 		refcount_set(&s->ref, 1);	/* owned by cur_session */
 		s->since_ns = ktime_get_ns();
+		spin_lock_bh(&sessions_lock);
+		list_add(&s->node, &all_sessions);
+		spin_unlock_bh(&sessions_lock);
 	}
 
 	old = rcu_replace_pointer(cur_session, s, lockdep_is_held(&target_lock));
@@ -587,6 +605,23 @@ static void __exit pfcount_exit(void)
 	set_target(0);
 	mutex_unlock(&target_lock);
 	rcu_barrier();	/* wait for session_free_rcu() before the code goes away */
+
+	/*
+	 * The probes are gone and every RCU callback has run. What is left on
+	 * the list is held only by canceled kretprobe instances, which will
+	 * never run fault_return(), so free it here.
+	 */
+	struct pf_session *s, *tmp;
+	int leaked = 0;
+
+	list_for_each_entry_safe(s, tmp, &all_sessions, node) {
+		list_del(&s->node);
+		put_pid(s->pid);
+		kfree(s);
+		leaked++;
+	}
+	if (leaked)
+		pr_info("pfcount: freed %d session(s) held by canceled probes\n", leaked);
 	pr_info("pfcount: unloaded\n");
 }
 

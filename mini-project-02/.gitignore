@@ -10,4 +10,5 @@ Module.symvers
 tests/faultgen
 tests/threadexit
 tests/threadchurn
+tests/uffdblock
 *.bin
