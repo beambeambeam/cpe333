@@ -233,10 +233,13 @@ static int exit_pre(struct kprobe *p, struct pt_regs *regs)
 	return 0;
 }
 
+/* acct_collect() is an inline stub without CONFIG_BSD_PROCESS_ACCT. Then the
+ * probe cannot be registered, and the module works without exit snapshots. */
 static struct kprobe exit_probe = {
 	.symbol_name	= "acct_collect",
 	.pre_handler	= exit_pre,
 };
+static bool exit_probe_on;
 
 /* ---------- target selection ---------- */
 
@@ -428,6 +431,7 @@ live:
 	seq_printf(m, "live_err_flt: %lld\n", atomic64_read(&s->error));
 	seq_printf(m, "follow: %d\n", READ_ONCE(follow));
 	seq_printf(m, "probe_missed: %d\n", fault_probe.nmissed);
+	seq_printf(m, "exit_snapshot: %d\n", exit_probe_on);
 	session_put(s);
 	return 0;
 }
@@ -561,11 +565,10 @@ static int __init pfcount_init(void)
 		return ret;
 	}
 	ret = register_kprobe(&exit_probe);
-	if (ret) {
-		pr_err("pfcount: register_kprobe(acct_collect) failed: %d\n", ret);
-		unregister_kretprobe(&fault_probe);
-		return ret;
-	}
+	if (ret)
+		pr_warn("pfcount: no kprobe on acct_collect (%d), exit snapshots off. Needs CONFIG_BSD_PROCESS_ACCT=y\n",
+			ret);
+	exit_probe_on = !ret;
 
 	pf_dir = proc_mkdir("pfcount", NULL);
 	if (!pf_dir ||
@@ -591,7 +594,8 @@ static int __init pfcount_init(void)
 
 err:
 	proc_remove(pf_dir);
-	unregister_kprobe(&exit_probe);
+	if (exit_probe_on)
+		unregister_kprobe(&exit_probe);
 	unregister_kretprobe(&fault_probe);
 	return ret;
 }
@@ -599,7 +603,8 @@ err:
 static void __exit pfcount_exit(void)
 {
 	proc_remove(pf_dir);
-	unregister_kprobe(&exit_probe);
+	if (exit_probe_on)
+		unregister_kprobe(&exit_probe);
 	unregister_kretprobe(&fault_probe);
 	mutex_lock(&target_lock);
 	set_target(0);

@@ -50,6 +50,7 @@ major = (ret & VM_FAULT_MAJOR) || (flags & FAULT_FLAG_TRIED);
 | THP | `madvise` mode |
 | `fault_around_bytes` | 65536 (16 pages) |
 | `read_ahead_kb` | 128 |
+| Kernel config | `CONFIG_KPROBES`, `CONFIG_KRETPROBES` (required); `CONFIG_BSD_PROCESS_ACCT` (exit snapshot, optional) |
 
 The full capture is in `results/00-environment.txt`.
 
@@ -121,6 +122,8 @@ A program like `python3 -c pass` exits in about 20 ms, before the CLI can read t
 - `max(mm->hiwater_vm, total_vm)` – the peak size (`VmPeak`)
 
 A kprobe handler runs in atomic context and cannot sleep, so it cannot take `mmap_lock`. That is why it reads these counter fields and does not walk the VMAs.
+
+`acct_collect()` exists only with `CONFIG_BSD_PROCESS_ACCT=y`. Without it, `include/linux/acct.h` makes it an empty inline function, and there is no symbol to probe. The module then logs a warning, loads without the exit snapshot, and reports `exit_snapshot: 0`. The region and fault report for a live PID still works. Ubuntu 24.04 sets the option.
 
 ### 4.4 Child processes: follow mode
 
@@ -288,6 +291,7 @@ The list is in the order we found things.
 - The kretprobe runs for every page fault on the system and returns early for other processes. We did not measure this overhead.
 - The exit snapshot uses counter fields without `mmap_lock`. That is safe for the last thread at exit, but it gives no per-VMA detail.
 - PIDs are resolved in the writer's PID namespace. We tested only in the initial namespace.
+- The exit snapshot needs `CONFIG_BSD_PROCESS_ACCT=y` (section 4.3). We tested the fallback only by probing a missing symbol name.
 - We tested only on 6.8 arm64. `VMA_ITERATOR` needs 6.1 or later. `regs_get_kernel_argument()` exists on x86_64 and arm64.
 
 ## 9. Conclusion

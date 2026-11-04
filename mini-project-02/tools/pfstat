@@ -260,7 +260,10 @@ def cmd_run(argv, interval, follow):
 
         print(bold(f"\npfcount run: {' '.join(argv)}  (pid {child}, "
                    f"{elapsed:.2f}s, exit {os.waitstatus_to_exitcode(status)})"))
-        if "exit_regions" in end:
+        if not end["exit_snapshot"]:
+            print(dim("  exit snapshot off: the kernel has no acct_collect() "
+                      "(CONFIG_BSD_PROCESS_ACCT=n)"))
+        elif "exit_regions" in end:
             print(f"  {'Memory regions at exit':<30}{end['exit_regions']:>14}")
             print(f"  {'Virtual address space at exit':<30}{human_kb(end['exit_vsize_kb']):>14}")
             print(f"  {'Peak virtual address space':<30}{human_kb(end['peak_vsize_kb']):>14}")
