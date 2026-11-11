@@ -1,0 +1,27 @@
+[faultgen 22112] start                        minflt=591 majflt=1
+[faultgen 22112] anon 64 MB (16384 pages)     minflt=16988 majflt=1
+[faultgen 22112] file 32768 KB (8192 pages)   minflt=16988 majflt=8193
+[faultgen 22112] free                         minflt=16988 majflt=8193
+[faultgen 22112] done                         minflt=16988 majflt=8193
+    time  regions       vsize         rss      minflt    majflt     min/s    maj/s
+     0.0       51     20.0 MB      9.6 MB         552         0         0        0
+     0.5       16      2.2 MB      1.4 MB         604         1       103        2
+     1.0       17     66.2 MB      9.9 MB       2,775         1      4299        0
+     1.5       17     66.2 MB     65.4 MB      16,988         1     28114        0
+     2.0       17     66.2 MB     65.4 MB      16,988         1         0        0
+     2.5       18     98.2 MB     97.4 MB      16,988     8,193         0    16359
+     3.0       18     98.2 MB     97.4 MB      16,988     8,193         0        0
+     3.5       16      2.2 MB      1.5 MB      16,988     8,193         0        0
+     4.0       16      2.2 MB      1.5 MB      16,988     8,193         0        0
+
+pfcount run: tests/faultgen sleep:1 anon:64 sleep:1 file:/tmp/pfcount-big.bin sleep:1 free sleep:1  (pid 22112, 4.53s, exit 0)
+  Memory regions at exit                    16
+  Virtual address space at exit         2.2 MB
+  Peak virtual address space           98.2 MB
+  Minor page faults                     16,522   match vs getrusage()
+  Major page faults                      8,193   match vs getrusage()
+    on anonymous memory                 16,451
+    on file-backed memory                8,264
+  fault scope: process only
+
+Exit status: 0

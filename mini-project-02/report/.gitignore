@@ -1,0 +1,23 @@
+*.aux
+*.log
+*.out
+*.toc
+*.xdv
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+!evidence/**/*.log
+~$*.docx
+**/.DS_Store
+
+# Intermediate review material excluded from the submission package
+/evidence/pr11-6122d3c/
+/evidence/pr11-be83bdc/
+/evidence/post-merge-5fbcb76/02-demo.txt
+/evidence/post-merge-5fbcb76/07-post-merge-summary.png
+
+# Cover page and built editions carry student names and IDs; keep them out of the public repo
+/frontpage/*
+!/frontpage/frontpage.example.tex
+/CPE333_MiniProject2_Report.docx
+/output/

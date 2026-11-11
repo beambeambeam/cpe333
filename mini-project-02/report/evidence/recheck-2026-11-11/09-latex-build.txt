@@ -1,0 +1,26 @@
+Command: latexmk -silent -xelatex -interaction=nonstopmode -halt-on-error -outdir="$report_build_dir" report.tex
+Output: output/pdf/CPE333_MiniProject2_Report.pdf
+
+Rc files read (in order):
+  ./.latexmkrc
+Latexmk: Run number 1 of rule 'xelatex'
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex)
+ restricted \write18 enabled.
+entering extended mode
+Latexmk: Getting log file 'tmp/pdfs/cpe333-report.bE1AtQ/report.log'
+Latexmk: Run number 2 of rule 'xelatex'
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex)
+ restricted \write18 enabled.
+entering extended mode
+Latexmk: Getting log file 'tmp/pdfs/cpe333-report.bE1AtQ/report.log'
+Latexmk: Run number 1 of rule 'xdvipdfmx'
+
+Pages:           21
+Page size:       595.28 x 841.89 pts (A4)
+File size:       927859 bytes
+PDF version:     1.7
+Build exit status: 0
+Rc files read (in order):
+  ./.latexmkrc
+Latexmk: This is Latexmk, John Collins, 9 March 2026. Version 4.88.
+Latexmk: Doing full clean up for 'report.tex'

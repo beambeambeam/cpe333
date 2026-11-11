@@ -1,0 +1,27 @@
+
+> ./vm.sh make unload
+sudo rmmod pfcoun
+
+> ./vm.sh make clean
+make -C module clean
+make[1]: Entering directory '/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module'
+make -C /lib/modules/6.8.0-147-generic/build M=/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module clean
+make[2]: Entering directory '/usr/src/linux-headers-6.8.0-147-generic'
+  CLEAN   /Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module/Module.symvers
+make[2]: Leaving directory '/usr/src/linux-headers-6.8.0-147-generic'
+make[1]: Leaving directory '/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module'
+rm -f tests/faultgen tests/threadexit tests/threadchurn tests/uffdblock /tmp/pfcount-big.bin
+
+> ./vm.sh stop
+time="2026-11-11T00:49:27+07:00" level=info msg="Sending SIGINT to hostagent process 79800"
+time="2026-11-11T00:49:27+07:00" level=info msg="Waiting for the host agent and the driver processes to shut down"
+time="2026-11-11T00:49:27+07:00" level=info msg="[hostagent] Received SIGINT, shutting down the host agent"
+time="2026-11-11T00:49:27+07:00" level=info msg="[hostagent] Shutting down the host agent"
+time="2026-11-11T00:49:27+07:00" level=info msg="[hostagent] Shutting down VZ"
+time="2026-11-11T00:49:27+07:00" level=info msg="[hostagent] [VZ] - vm state change: stopped"
+time="2026-11-11T00:49:27+07:00" level=error msg="[hostagent] accept tcp 127.0.0.1:52215: use of closed network connection"
+time="2026-11-11T00:49:27+07:00" level=info msg="[hostagent] gvproxy API request" component=services-api endpoint=/services/forwarder/unexpose local="127.0.0.1:52215" method=POST outcome=success protocol=tcp source=
+time="2026-11-11T00:49:28+07:00" level=info msg="Waiting for the instance to shut down"
+time="2026-11-11T00:49:28+07:00" level=info msg="The instance cpe333 has shut down"
+
+Exit status: 0

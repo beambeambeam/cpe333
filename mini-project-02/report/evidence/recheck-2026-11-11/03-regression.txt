@@ -1,0 +1,8 @@
+Command: ./vm.sh run sudo sh tests/regress.sh
+PASS retarge
+PASS pidreuse (pid 22425 reused)
+PASS threadexit (100 runs)
+PASS lifetime (20000 reads)
+PASS unload (blocked fault's session freed)
+
+Exit status: 0

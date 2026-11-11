@@ -1,0 +1,6 @@
+commit: 5fbcb7679298f36e2bae8b7cd3dbe6bf6a609800
+merge: 5fbcb7679298f36e2bae8b7cd3dbe6bf6a609800 feat: add mini-project 02 page-fault counter and report (#11)
+Linux lima-cpe333 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC Wed Sep  2 14:30:29 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
+CONFIG_BSD_PROCESS_ACCT=y
+CONFIG_KPROBES=y
+CONFIG_KRETPROBES=y

@@ -1,0 +1,16 @@
+PR head: ed0a7a64bb9a9a22aa93e97d2012740f465cae5a
+Merge-base module source: 5fbcb7679298f36e2bae8b7cd3dbe6bf6a609800
+
+date: 2026-11-10T17:28:33Z
+Linux lima-cpe333 6.8.0-147-generic #147-Ubuntu SMP PREEMPT_DYNAMIC Thu Sep 24 11:39:52 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux
+distro: Ubuntu 24.04.5 LTS
+gcc: gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+page size: 4096
+CPUs: 4
+memory: 3905 MB
+THP: always [madvise] never
+CONFIG_BSD_PROCESS_ACCT=y
+CONFIG_KPROBES=y
+CONFIG_KRETPROBES=y
+
+Exit status: 0

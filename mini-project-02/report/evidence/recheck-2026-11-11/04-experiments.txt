@@ -1,0 +1,17 @@
+sh scripts/experiments.sh
+== e1a-report-sleep: report vs /proc on sleep(1)
+== e1b-report-init: report vs /proc on PID 1
+== e2-anon: 64 MB anonymous, 4 KB pages
+== e3-filecold: 32 MB file, cold cache, MADV_RANDOM
+== e4-filewarm: 32 MB file, warm cache, MADV_RANDOM
+== e5-fileseq: 32 MB file, cold cache, readahead on
+== e6-thp: 64 MB anonymous, transparent huge pages
+== e7-timeline: timeline: anon, file, free
+== e8a-python: python3 -c pass
+== e8b-ls: sh -c ls, process only
+== e8c-ls-follow: sh -c ls, with descendants
+== e8d-gcc: gcc driver, process only
+== e8e-gcc-follow: gcc with cc1/as/ld descendants
+results in results/
+
+Exit status: 0

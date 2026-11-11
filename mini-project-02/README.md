@@ -1,7 +1,9 @@
 # CPE333 Mini-Project 02 – Page-Fault Counter
 
 - [Assignment instructions](instructions.md)
-- [Experiment report](REPORT.md) – design, findings, results, how to reproduce
+- [Development notes](REPORT.md) – design notes and an earlier experiment run from PR #11
+- [Group report source and evidence](report/) – LaTeX, figures, and post-merge records; the cover page and built PDF/DOCX stay out of git because they list student IDs
+- [Assignment PDF](CPE333_MiniProject2_2026.pdf)
 
 `pfcount` is a kernel module. `pfstat` is its command-line front end. Give it a PID and it reports:
 
@@ -21,6 +23,7 @@ It also checks each number against `/proc/<pid>/maps`, `/proc/<pid>/stat` and `g
 | `tests/regress.sh` | Regression checks for the module (`sudo sh tests/regress.sh`). `tests/threadexit.c`, `threadchurn.c`, `uffdblock.c` are its helpers. |
 | `scripts/experiments.sh` | Runs every experiment in the report, output to `results/`. |
 | `results/` | Raw output of the last experiment run. |
+| `report/` | Group report LaTeX source, figures, and post-merge evidence. The private cover and built PDF/DOCX remain local. |
 | `Makefile` | Build, load, demo, and experiments targets. Runs inside Linux. |
 | `vm.sh` | macOS helper for the Lima Ubuntu VM. |
 

@@ -1,5 +1,7 @@
 # Mini-Project 2 – Page-Fault Counter for a Process
 
+> **Development notes.** These notes were written while building the tool in PR #11. Their numbers come from `results/`, an earlier run than the group report. The group report's measurements are in `report/evidence/post-merge-5fbcb76/`.
+
 CPE333 Operating Systems · Topic: Virtual Memory
 
 ## 1. Goal

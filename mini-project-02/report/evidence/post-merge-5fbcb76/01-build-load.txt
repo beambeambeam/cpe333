@@ -1,0 +1,25 @@
+make -C module clean
+make[1]: Entering directory '/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module'
+make -C /lib/modules/6.8.0-142-generic/build M=/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module clean
+make[2]: Entering directory '/usr/src/linux-headers-6.8.0-142-generic'
+make[2]: Leaving directory '/usr/src/linux-headers-6.8.0-142-generic'
+make[1]: Leaving directory '/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module'
+rm -f tests/faultgen tests/threadexit tests/threadchurn tests/uffdblock /tmp/pfcount-big.bin
+make -C module
+make[1]: Entering directory '/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module'
+make -C /lib/modules/6.8.0-142-generic/build M=/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module modules
+make[2]: Entering directory '/usr/src/linux-headers-6.8.0-142-generic'
+  CC [M]  /Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module/pfcount.o
+  MODPOST /Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module/Module.symvers
+  CC [M]  /Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module/pfcount.mod.o
+  LD [M]  /Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module/pfcount.ko
+  BTF [M] /Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module/pfcount.ko
+make[2]: Leaving directory '/usr/src/linux-headers-6.8.0-142-generic'
+make[1]: Leaving directory '/Users/wisitsuwannao/.codex/worktrees/cpe333-pr11-review/mini-project-02/module'
+cc -O2 -Wall -o tests/faultgen tests/faultgen.c
+cc -O2 -Wall -pthread -o tests/threadexit tests/threadexit.c
+cc -O2 -Wall -pthread -o tests/threadchurn tests/threadchurn.c
+cc -O2 -Wall -pthread -o tests/uffdblock tests/uffdblock.c
+maps
+stats
+target

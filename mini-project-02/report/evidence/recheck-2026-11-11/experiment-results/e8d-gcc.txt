@@ -1,0 +1,12 @@
+$ sudo tools/pfstat -- gcc -O2 -o /tmp/fg tests/faultgen.c
+
+pfcount run: gcc -O2 -o /tmp/fg tests/faultgen.c  (pid 16006, 0.04s, exit 0)
+  Memory regions at exit                    21
+  Virtual address space at exit         6.6 MB
+  Peak virtual address space            6.6 MB
+  Minor page faults                        293   differs by -5703 vs getrusage()
+  Major page faults                          0   match vs getrusage()
+    on anonymous memory                    166
+    on file-backed memory                  127
+  fault scope: process only
+  getrusage() includes child processes: use -f to count them too

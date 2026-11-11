@@ -94,8 +94,18 @@ check_unload() {
 	echo $P > $T/target
 	sleep 0.5
 	echo 0 > $T/target
+	message='pfcount: freed 1 session(s) held by canceled probes'
+	before=$(dmesg | grep -F -c "$message" || true)
 	rmmod pfcount
-	freed=$(dmesg | tail -5 | grep -c "freed 1 session(s) held by canceled probes")
+	freed=0
+	for try in 1 2 3 4 5; do
+		after=$(dmesg | grep -F -c "$message" || true)
+		if [ "$after" -gt "$before" ]; then
+			freed=$((after - before))
+			break
+		fi
+		sleep 0.1
+	done
 	kill -9 $P; wait $P 2>/dev/null
 	insmod module/pfcount.ko
 	[ "$freed" = 1 ] && pass "unload (blocked fault's session freed)" ||

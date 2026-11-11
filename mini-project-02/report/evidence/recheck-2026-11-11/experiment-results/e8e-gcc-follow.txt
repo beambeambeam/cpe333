@@ -1,0 +1,11 @@
+$ sudo tools/pfstat -f -- gcc -O2 -o /tmp/fg tests/faultgen.c
+
+pfcount run: gcc -O2 -o /tmp/fg tests/faultgen.c  (pid 16013, 0.04s, exit 0)
+  Memory regions at exit                    21
+  Virtual address space at exit         6.6 MB
+  Peak virtual address space            6.6 MB
+  Minor page faults                      5,973   match vs wait4(), waited descendants only
+  Major page faults                          0   match vs wait4(), waited descendants only
+    on anonymous memory                  4,984
+    on file-backed memory                  989
+  fault scope: process + descendants

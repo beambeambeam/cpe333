@@ -1,0 +1,20 @@
+CPE333 MINI-PROJECT 2 — POST-MERGE TEST
+Repository: beambeambeam/cpe333
+Branch tested: main
+Merge commit: 5fbcb7679298f36e2bae8b7cd3dbe6bf6a609800
+Environment: Lima Ubuntu 24.04, Linux 6.8.0-142-generic, ARM64
+Kernel options: KPROBES=y, KRETPROBES=y, BSD_PROCESS_ACCT=y
+
+BUILD + LOAD: PASS
+DEMO: PASS (program exit 0; min/maj faults match getrusage)
+REGRESSION: PASS
+  retarget; PID reuse; thread exit x100; lifetime reads x20,000;
+  unload while a page fault is blocked
+SIGCHLD=SIG_IGN cleanup: PASS (target idle; follow=N)
+EXPERIMENTS E1–E8: PASS
+  Process-only ls/gcc differ from waited-descendant usage as documented;
+  follow-mode comparisons match.
+MAKE CLEAN: PASS (all test binaries removed)
+
+GitHub CI: no checks configured for this branch.
+Raw logs: this folder and experiment-results/.
