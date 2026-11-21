@@ -1,0 +1,12 @@
+$ uname -srm
+Linux 7.2.12-orbstack-00394-gbecdd6130068 aarch64
+$ grep PRETTY_NAME /etc/os-release
+PRETTY_NAME="Ubuntu 24.04.5 LTS"
+$ ls --version | head -1
+ls (GNU coreutils) 9.4
+$ strace --version | head -1
+strace -- version 6.8
+$ tmux -V
+tmux 3.4
+$ date
+Sat Nov 21 09:28:27 UTC 2026

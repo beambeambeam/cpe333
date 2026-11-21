@@ -1,0 +1,166 @@
+
+### 1.1 Hard and soft link to a source, then delete the source
+$ echo "original data" > source.txt
+$ ln source.txt hard.txt
+$ ln -s source.txt soft.txt
+$ ls -li
+total 12
+8977860 -rw-r--r-- 2 root root 14 Nov 21 09:28 hard.txt
+8977861 lrwxrwxrwx 1 root root 10 Nov 21 09:28 soft.txt -> source.txt
+8977860 -rw-r--r-- 2 root root 14 Nov 21 09:28 source.txt
+$ cat hard.txt
+original data
+$ cat soft.txt
+original data
+$ rm source.txt
+$ ls -li
+total 8
+8977860 -rw-r--r-- 1 root root 14 Nov 21 09:28 hard.txt
+8977861 lrwxrwxrwx 1 root root 10 Nov 21 09:28 soft.txt -> source.txt
+$ cat hard.txt
+original data
+$ cat soft.txt
+cat: soft.txt: No such file or directory
+[exit status 1]
+$ readlink soft.txt
+source.txt
+$ echo "new source" > source.txt
+$ cat soft.txt
+new source
+$ cat hard.txt
+original data
+
+### 1.2a Symbolic link chain: delete the source
+$ mkdir sym-a && cd sym-a
+$ echo "level 0 data" > source.txt
+$ ln -s source.txt level1
+$ ln -s level1 level2
+$ ls -li
+total 12
+8977865 lrwxrwxrwx 1 root root 10 Nov 21 09:28 level1 -> source.txt
+8977866 lrwxrwxrwx 1 root root  6 Nov 21 09:28 level2 -> level1
+8977864 -rw-r--r-- 1 root root 13 Nov 21 09:28 source.txt
+$ cat level2
+level 0 data
+$ rm source.txt
+$ cat level1
+cat: level1: No such file or directory
+[exit status 1]
+$ cat level2
+cat: level2: No such file or directory
+[exit status 1]
+$ cd ..
+
+### 1.2b Symbolic link chain: delete level 1
+$ mkdir sym-b && cd sym-b
+$ echo "level 0 data" > source.txt
+$ ln -s source.txt level1
+$ ln -s level1 level2
+$ rm level1
+$ ls -li
+total 8
+8977870 lrwxrwxrwx 1 root root  6 Nov 21 09:28 level2 -> level1
+8977868 -rw-r--r-- 1 root root 13 Nov 21 09:28 source.txt
+$ cat source.txt
+level 0 data
+$ cat level2
+cat: level2: No such file or directory
+[exit status 1]
+$ cd ..
+
+### 1.2c Hard link chain: delete the source
+$ mkdir hard-a && cd hard-a
+$ echo "level 0 data" > source.txt
+$ ln source.txt level1
+$ ln level1 level2
+$ ls -li
+total 12
+8977872 -rw-r--r-- 3 root root 13 Nov 21 09:28 level1
+8977872 -rw-r--r-- 3 root root 13 Nov 21 09:28 level2
+8977872 -rw-r--r-- 3 root root 13 Nov 21 09:28 source.txt
+$ rm source.txt
+$ ls -li
+total 8
+8977872 -rw-r--r-- 2 root root 13 Nov 21 09:28 level1
+8977872 -rw-r--r-- 2 root root 13 Nov 21 09:28 level2
+$ cat level1
+level 0 data
+$ cat level2
+level 0 data
+$ cd ..
+
+### 1.2d Hard link chain: delete level 1
+$ mkdir hard-b && cd hard-b
+$ echo "level 0 data" > source.txt
+$ ln source.txt level1
+$ ln level1 level2
+$ rm level1
+$ ls -li
+total 8
+8977874 -rw-r--r-- 2 root root 13 Nov 21 09:28 level2
+8977874 -rw-r--r-- 2 root root 13 Nov 21 09:28 source.txt
+$ cat level2
+level 0 data
+$ cd ..
+
+### 1.3 Link to a directory and a loop back to an upper level
+$ mkdir -p top/sub
+$ echo "file in sub" > top/sub/file.txt
+$ ln top top-hard
+ln: top: hard link not allowed for directory
+[exit status 1]
+$ ln -s top top-soft
+$ ls -l top-soft/sub
+total 4
+-rw-r--r-- 1 root root 12 Nov 21 09:28 file.txt
+$ ln -s .. top/sub/up
+$ ls -l top/sub
+total 8
+-rw-r--r-- 1 root root 12 Nov 21 09:28 file.txt
+lrwxrwxrwx 1 root root  2 Nov 21 09:28 up -> ..
+$ ls top/sub/up/sub/up/sub/up/sub
+file.txt
+up
+$ ls -R top
+top:
+sub
+
+top/sub:
+file.txt
+up
+$ ls -RL top
+top:
+sub
+
+top/sub:
+file.txt
+up
+ls: top/sub/up: not listing already-listed directory
+[exit status 2]
+$ find -L top
+top
+top/sub
+top/sub/file.txt
+find: File system loop detected; 'top/sub/up' is part of the same file system loop as 'top'.
+[exit status 1]
+$ realpath top/sub/up/sub/up/sub/up
+/tmp/ps12.I4ra4N/lab1/top
+
+### 1.4 Link from one file system to another (Linux equivalent of C: and D:)
+$ echo "data on file system A" > /tmp/ps12-fsA.txt
+$ df -T /tmp /dev/shm | cat
+Filesystem     Type    1K-blocks     Used Available Use% Mounted on
+overlay        overlay 133693440 32901120 100792320  25% /
+shm            tmpfs     4098048        0   4098048   0% /dev/shm
+$ stat -c "%n device=%d" /tmp /dev/shm
+/tmp device=68
+/dev/shm device=140
+$ ln /tmp/ps12-fsA.txt /dev/shm/ps12-hard.txt
+ln: failed to create hard link '/dev/shm/ps12-hard.txt' => '/tmp/ps12-fsA.txt': Invalid cross-device link
+[exit status 1]
+$ ln -s /tmp/ps12-fsA.txt /dev/shm/ps12-soft.txt
+$ ls -l /dev/shm/ps12-soft.txt
+lrwxrwxrwx 1 root root 17 Nov 21 09:28 /dev/shm/ps12-soft.txt -> /tmp/ps12-fsA.txt
+$ cat /dev/shm/ps12-soft.txt
+data on file system A
+$ rm -f /tmp/ps12-fsA.txt /dev/shm/ps12-soft.txt

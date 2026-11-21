@@ -1,0 +1,44 @@
+--- Step 1: T1 runs cat > pipeFile; no reader yet, so T1 waits in open() ---
+[Terminal 1]
+T1$ cat > pipeFile
+[Terminal 2]
+T2$
+--- Step 2: T2 runs cat pipeFile; both ends are now open ---
+[Terminal 1]
+T1$ cat > pipeFile
+[Terminal 2]
+T2$ cat pipeFile
+--- Step 3: T1 types hello linux ---
+[Terminal 1]
+T1$ cat > pipeFile
+hello linux
+[Terminal 2]
+T2$ cat pipeFile
+hello linux
+--- Step 4: T1 types two more lines ---
+[Terminal 1]
+T1$ cat > pipeFile
+hello linux
+second line from terminal 1
+third line
+[Terminal 2]
+T2$ cat pipeFile
+hello linux
+second line from terminal 1
+third line
+--- Step 5: T1 presses ^D; both cat commands exit ---
+[Terminal 1]
+T1$ cat > pipeFile
+hello linux
+second line from terminal 1
+third line
+T1$
+[Terminal 2]
+T2$ cat pipeFile
+hello linux
+second line from terminal 1
+third line
+T2$
+--- After the session ---
+$ ls -la pipeFile
+prw-r--r-- 1 root root 0 Nov 21 09:28 pipeFile

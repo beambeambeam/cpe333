@@ -1,0 +1,81 @@
+$ echo hello > foo
+$ script -qc 'strace cat foo' /dev/null | tr -d '\r'
+execve("/usr/bin/cat", ["cat", "foo"], 0xffffee397858 /* 7 vars */) = 0
+brk(NULL)                               = 0xaaaafcb29000
+mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xffffb9327000
+faccessat(AT_FDCWD, "/etc/ld.so.preload", R_OK) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=5395, ...}) = 0
+mmap(NULL, 5395, PROT_READ, MAP_PRIVATE, 3, 0) = 0xffffb9325000
+close(3)                                = 0
+openat(AT_FDCWD, "/lib/aarch64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0\267\0\1\0\0\0\360\206\2\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=1722920, ...}) = 0
+mmap(NULL, 1892240, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_DENYWRITE, -1, 0) = 0xffffb9123000
+mmap(0xffffb9130000, 1826704, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0) = 0xffffb9130000
+munmap(0xffffb9123000, 53248)           = 0
+munmap(0xffffb92ee000, 12176)           = 0
+mprotect(0xffffb92ca000, 77824, PROT_NONE) = 0
+mmap(0xffffb92dd000, 20480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x19d000) = 0xffffb92dd000
+mmap(0xffffb92e2000, 49040, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0xffffb92e2000
+close(3)                                = 0
+set_tid_address(0xffffb9327ff0)         = 407
+set_robust_list(0xffffb9328000, 24)     = 0
+rseq(0xffffb9328640, 0x20, 0, 0xd428bc00) = 0
+mprotect(0xffffb92dd000, 12288, PROT_READ) = 0
+mprotect(0xaaaadf06f000, 4096, PROT_READ) = 0
+mprotect(0xffffb932f000, 8192, PROT_READ) = 0
+prlimit64(0, RLIMIT_STACK, NULL, {rlim_cur=8192*1024, rlim_max=RLIM64_INFINITY}) = 0
+munmap(0xffffb9325000, 5395)            = 0
+getrandom("\xf7\x59\x07\x2c\x09\x89\x77\x6e", 8, GRND_NONBLOCK) = 8
+brk(NULL)                               = 0xaaaafcb29000
+brk(0xaaaafcb4a000)                     = 0xaaaafcb4a000
+fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+openat(AT_FDCWD, "foo", O_RDONLY)       = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=6, ...}) = 0
+fadvise64(3, 0, 0, POSIX_FADV_SEQUENTIAL) = 0
+mmap(NULL, 139264, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0xffffb910e000
+read(3, "hello\n", 131072)              = 6
+write(1, "hello\n", 6hello
+)                  = 6
+read(3, "", 131072)                     = 0
+munmap(0xffffb910e000, 139264)          = 0
+close(3)                                = 0
+close(1)                                = 0
+close(2)                                = 0
+exit_group(0)                           = ?
++++ exited with 0 +++
+
+### Only the file-related calls, on a terminal
+$ script -qc 'strace -e trace=openat,read,write,close cat foo' /dev/null | tr -d '\r'
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+close(3)                                = 0
+openat(AT_FDCWD, "/lib/aarch64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0\267\0\1\0\0\0\360\206\2\0\0\0\0\0"..., 832) = 832
+close(3)                                = 0
+openat(AT_FDCWD, "foo", O_RDONLY)       = 3
+read(3, "hello\n", 131072)              = 6
+write(1, "hello\n", 6hello
+)                  = 6
+read(3, "", 131072)                     = 0
+close(3)                                = 0
+close(1)                                = 0
+close(2)                                = 0
++++ exited with 0 +++
+
+### Same trace with stdout redirected to a regular file
+$ strace -e trace=openat,read,write,copy_file_range,close cat foo > out.txt
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+close(3)                                = 0
+openat(AT_FDCWD, "/lib/aarch64-linux-gnu/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0\267\0\1\0\0\0\360\206\2\0\0\0\0\0"..., 832) = 832
+close(3)                                = 0
+openat(AT_FDCWD, "foo", O_RDONLY)       = 3
+copy_file_range(3, NULL, 1, NULL, 9223372035781033984, 0) = 6
+copy_file_range(3, NULL, 1, NULL, 9223372035781033984, 0) = 0
+close(3)                                = 0
+close(1)                                = 0
+close(2)                                = 0
++++ exited with 0 +++
+$ cat out.txt
+hello
