@@ -4,19 +4,19 @@ $ echo "original data" > source.txt
 $ ln source.txt hard.txt
 $ ln -s source.txt soft.txt
 $ ls -li
-total 12
-8977860 -rw-r--r-- 2 root root 14 Nov 21 09:28 hard.txt
-8977861 lrwxrwxrwx 1 root root 10 Nov 21 09:28 soft.txt -> source.txt
-8977860 -rw-r--r-- 2 root root 14 Nov 21 09:28 source.txt
+total 8
+3016 -rw-r--r-- 2 gunteed gunteed 14 Nov 22 18:01 hard.txt
+3017 lrwxrwxrwx 1 gunteed gunteed 10 Nov 22 18:01 soft.txt -> source.txt
+3016 -rw-r--r-- 2 gunteed gunteed 14 Nov 22 18:01 source.txt
 $ cat hard.txt
 original data
 $ cat soft.txt
 original data
 $ rm source.txt
 $ ls -li
-total 8
-8977860 -rw-r--r-- 1 root root 14 Nov 21 09:28 hard.txt
-8977861 lrwxrwxrwx 1 root root 10 Nov 21 09:28 soft.txt -> source.txt
+total 4
+3016 -rw-r--r-- 1 gunteed gunteed 14 Nov 22 18:01 hard.txt
+3017 lrwxrwxrwx 1 gunteed gunteed 10 Nov 22 18:01 soft.txt -> source.txt
 $ cat hard.txt
 original data
 $ cat soft.txt
@@ -36,10 +36,10 @@ $ echo "level 0 data" > source.txt
 $ ln -s source.txt level1
 $ ln -s level1 level2
 $ ls -li
-total 12
-8977865 lrwxrwxrwx 1 root root 10 Nov 21 09:28 level1 -> source.txt
-8977866 lrwxrwxrwx 1 root root  6 Nov 21 09:28 level2 -> level1
-8977864 -rw-r--r-- 1 root root 13 Nov 21 09:28 source.txt
+total 4
+3021 lrwxrwxrwx 1 gunteed gunteed 10 Nov 22 18:01 level1 -> source.txt
+3022 lrwxrwxrwx 1 gunteed gunteed  6 Nov 22 18:01 level2 -> level1
+3020 -rw-r--r-- 1 gunteed gunteed 13 Nov 22 18:01 source.txt
 $ cat level2
 level 0 data
 $ rm source.txt
@@ -58,9 +58,9 @@ $ ln -s source.txt level1
 $ ln -s level1 level2
 $ rm level1
 $ ls -li
-total 8
-8977870 lrwxrwxrwx 1 root root  6 Nov 21 09:28 level2 -> level1
-8977868 -rw-r--r-- 1 root root 13 Nov 21 09:28 source.txt
+total 4
+3026 lrwxrwxrwx 1 gunteed gunteed  6 Nov 22 18:01 level2 -> level1
+3024 -rw-r--r-- 1 gunteed gunteed 13 Nov 22 18:01 source.txt
 $ cat source.txt
 level 0 data
 $ cat level2
@@ -75,14 +75,14 @@ $ ln source.txt level1
 $ ln level1 level2
 $ ls -li
 total 12
-8977872 -rw-r--r-- 3 root root 13 Nov 21 09:28 level1
-8977872 -rw-r--r-- 3 root root 13 Nov 21 09:28 level2
-8977872 -rw-r--r-- 3 root root 13 Nov 21 09:28 source.txt
+3028 -rw-r--r-- 3 gunteed gunteed 13 Nov 22 18:01 level1
+3028 -rw-r--r-- 3 gunteed gunteed 13 Nov 22 18:01 level2
+3028 -rw-r--r-- 3 gunteed gunteed 13 Nov 22 18:01 source.txt
 $ rm source.txt
 $ ls -li
 total 8
-8977872 -rw-r--r-- 2 root root 13 Nov 21 09:28 level1
-8977872 -rw-r--r-- 2 root root 13 Nov 21 09:28 level2
+3028 -rw-r--r-- 2 gunteed gunteed 13 Nov 22 18:01 level1
+3028 -rw-r--r-- 2 gunteed gunteed 13 Nov 22 18:01 level2
 $ cat level1
 level 0 data
 $ cat level2
@@ -97,8 +97,8 @@ $ ln level1 level2
 $ rm level1
 $ ls -li
 total 8
-8977874 -rw-r--r-- 2 root root 13 Nov 21 09:28 level2
-8977874 -rw-r--r-- 2 root root 13 Nov 21 09:28 source.txt
+3030 -rw-r--r-- 2 gunteed gunteed 13 Nov 22 18:01 level2
+3030 -rw-r--r-- 2 gunteed gunteed 13 Nov 22 18:01 source.txt
 $ cat level2
 level 0 data
 $ cd ..
@@ -112,12 +112,12 @@ ln: top: hard link not allowed for directory
 $ ln -s top top-soft
 $ ls -l top-soft/sub
 total 4
--rw-r--r-- 1 root root 12 Nov 21 09:28 file.txt
+-rw-r--r-- 1 gunteed gunteed 12 Nov 22 18:01 file.txt
 $ ln -s .. top/sub/up
 $ ls -l top/sub
-total 8
--rw-r--r-- 1 root root 12 Nov 21 09:28 file.txt
-lrwxrwxrwx 1 root root  2 Nov 21 09:28 up -> ..
+total 4
+-rw-r--r-- 1 gunteed gunteed 12 Nov 22 18:01 file.txt
+lrwxrwxrwx 1 gunteed gunteed  2 Nov 22 18:01 up -> ..
 $ ls top/sub/up/sub/up/sub/up/sub
 file.txt
 up
@@ -140,27 +140,27 @@ ls: top/sub/up: not listing already-listed directory
 $ find -L top
 top
 top/sub
+find: File system loop detected; the following directory is part of the cycle: ‘top/sub/up’
 top/sub/file.txt
-find: File system loop detected; 'top/sub/up' is part of the same file system loop as 'top'.
 [exit status 1]
 $ realpath top/sub/up/sub/up/sub/up
-/tmp/ps12.I4ra4N/lab1/top
+/tmp/ps12.1arIAs/lab1/top
 
 ### 1.4 Link from one file system to another (Linux equivalent of C: and D:)
 $ echo "data on file system A" > /tmp/ps12-fsA.txt
 $ df -T /tmp /dev/shm | cat
-Filesystem     Type    1K-blocks     Used Available Use% Mounted on
-overlay        overlay 133693440 32901120 100792320  25% /
-shm            tmpfs     4098048        0   4098048   0% /dev/shm
+Filesystem     Type  1K-blocks  Used Available Use% Mounted on
+tmpfs          tmpfs   8120332 94276   8026056   2% /tmp
+tmpfs          tmpfs   8120332 17944   8102388   1% /dev/shm
 $ stat -c "%n device=%d" /tmp /dev/shm
-/tmp device=68
-/dev/shm device=140
+/tmp device=55
+/dev/shm device=28
 $ ln /tmp/ps12-fsA.txt /dev/shm/ps12-hard.txt
 ln: failed to create hard link '/dev/shm/ps12-hard.txt' => '/tmp/ps12-fsA.txt': Invalid cross-device link
 [exit status 1]
 $ ln -s /tmp/ps12-fsA.txt /dev/shm/ps12-soft.txt
 $ ls -l /dev/shm/ps12-soft.txt
-lrwxrwxrwx 1 root root 17 Nov 21 09:28 /dev/shm/ps12-soft.txt -> /tmp/ps12-fsA.txt
+lrwxrwxrwx 1 gunteed gunteed 17 Nov 22 18:01 /dev/shm/ps12-soft.txt -> /tmp/ps12-fsA.txt
 $ cat /dev/shm/ps12-soft.txt
 data on file system A
 $ rm -f /tmp/ps12-fsA.txt /dev/shm/ps12-soft.txt

@@ -131,34 +131,37 @@ lab2_fifo_setup() {
 lab2_fifo_terminals() {
     cd "$WORK/lab2"
     local s=ps12
-    tmux kill-server 2>/dev/null
-    tmux new-session -d -s "$s" -x 60 -y 12 -n T1
-    tmux new-window -t "$s" -n T2
+    # Use a private tmux server and explicit Bash panes. The host's default
+    # shell may be fish, which does not accept the PS1 setup below.
+    local socket="ps12-$$"
+    tmux -L "$socket" kill-server 2>/dev/null
+    tmux -L "$socket" new-session -d -s "$s" -x 60 -y 12 -n T1 'exec bash --noprofile --norc -i'
+    tmux -L "$socket" new-window -t "$s" -n T2 'exec bash --noprofile --norc -i'
     snap() {
         printf -- '--- %s ---\n' "$1"
-        printf '[Terminal 1]\n'; tmux capture-pane -p -t "$s:T1" | sed '/^$/d'
-        printf '[Terminal 2]\n'; tmux capture-pane -p -t "$s:T2" | sed '/^$/d'
+        printf '[Terminal 1]\n'; tmux -L "$socket" capture-pane -p -t "$s:T1" | sed '/^$/d'
+        printf '[Terminal 2]\n'; tmux -L "$socket" capture-pane -p -t "$s:T2" | sed '/^$/d'
     }
-    tmux send-keys -t "$s:T1" "PS1='T1\$ '; cd $WORK/lab2; clear" Enter
-    tmux send-keys -t "$s:T2" "PS1='T2\$ '; cd $WORK/lab2; clear" Enter
+    tmux -L "$socket" send-keys -t "$s:T1" "PS1='T1\$ '; cd $WORK/lab2; clear" Enter
+    tmux -L "$socket" send-keys -t "$s:T2" "PS1='T2\$ '; cd $WORK/lab2; clear" Enter
     sleep 0.5
-    tmux send-keys -t "$s:T1" 'cat > pipeFile' Enter
+    tmux -L "$socket" send-keys -t "$s:T1" 'cat > pipeFile' Enter
     sleep 1
     snap "Step 1: T1 runs cat > pipeFile; no reader yet, so T1 waits in open()"
-    tmux send-keys -t "$s:T2" 'cat pipeFile' Enter
+    tmux -L "$socket" send-keys -t "$s:T2" 'cat pipeFile' Enter
     sleep 1
     snap "Step 2: T2 runs cat pipeFile; both ends are now open"
-    tmux send-keys -t "$s:T1" 'hello linux' Enter
+    tmux -L "$socket" send-keys -t "$s:T1" 'hello linux' Enter
     sleep 1
     snap "Step 3: T1 types hello linux"
-    tmux send-keys -t "$s:T1" 'second line from terminal 1' Enter
-    tmux send-keys -t "$s:T1" 'third line' Enter
+    tmux -L "$socket" send-keys -t "$s:T1" 'second line from terminal 1' Enter
+    tmux -L "$socket" send-keys -t "$s:T1" 'third line' Enter
     sleep 1
     snap "Step 4: T1 types two more lines"
-    tmux send-keys -t "$s:T1" C-d
+    tmux -L "$socket" send-keys -t "$s:T1" C-d
     sleep 1
     snap "Step 5: T1 presses ^D; both cat commands exit"
-    tmux kill-server
+    tmux -L "$socket" kill-server
     printf -- '--- After the session ---\n'
     run 'ls -la pipeFile'
 }
