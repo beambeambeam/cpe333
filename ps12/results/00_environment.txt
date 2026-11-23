@@ -1,0 +1,12 @@
+$ uname -srm
+Linux 7.3.3-1-cachyos x86_64
+$ grep PRETTY_NAME /etc/os-release
+PRETTY_NAME="CachyOS"
+$ ls --version | head -1
+ls (GNU coreutils) 9.12
+$ strace --version | head -1
+strace -- version 7.3
+$ tmux -V
+tmux 3.8
+$ date
+Sun Nov 22 06:01:05 PM +07 2026
