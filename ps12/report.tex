@@ -8,6 +8,8 @@
 \usepackage{booktabs}
 \usepackage{tabularx}
 \usepackage{listings}
+\usepackage{graphicx}
+\usepackage{float}
 \usepackage{hyperref}
 
 \hypersetup{
@@ -17,12 +19,10 @@
 }
 
 \definecolor{codegray}{gray}{0.95}
-\definecolor{commentgray}{gray}{0.35}
 
 \lstset{
     backgroundcolor=\color{codegray},
     basicstyle=\ttfamily\small,
-    commentstyle=\color{commentgray},
     frame=single,
     breaklines=true,
     columns=fullflexible,
@@ -32,7 +32,14 @@
 }
 
 \newcommand{\code}[1]{\texttt{#1}}
-\newcommand{\pending}[1]{\textcolor{red}{\textbf{[Pending Windows run:} #1\textbf{]}}}
+% \shot{file under results/screenshots/}{width}{caption}
+\newcommand{\shot}[3]{%
+    \begin{figure}[H]
+        \centering
+        \includegraphics[width=#2,height=0.6\textheight,keepaspectratio]{results/screenshots/#1}
+        \caption{#3}
+    \end{figure}
+}
 
 \title{CPE333 Problem Session 12\\File System and Implementation}
 \author{
@@ -57,33 +64,62 @@ directory links on Linux and Windows. Lab 2 studies the Linux named pipe (FIFO)
 file type. Lab 3 traces the system calls that \code{cat} uses to read a file and
 write it to the screen.
 
-The Linux transcripts in \code{results/} were produced by
-\code{ps12/run-linux.sh}. The Windows commands are in
-\code{ps12/windows-links.cmd}. Each listing in this report is copied from those
-transcripts. Inode numbers, addresses, and dates change from run to run.
+The Linux transcripts were produced by \code{run-linux.sh}, and the Windows
+transcript by \code{windows-links.cmd} (which calls \code{run-windows.ps1}).
+Every listing in this report is copied from \code{results/}, and every figure
+is from \code{results/screenshots/}. Inode numbers, dates, and free space change
+from run to run.
 
 \section{Execution environment}
 
+\paragraph{Linux.} Labs 1--3 ran directly on CachyOS, an Arch-based
+distribution, on an x86-64 machine.
+
 \begin{lstlisting}
 $ uname -srm
-Linux 7.2.12-orbstack-00394-gbecdd6130068 aarch64
+Linux 7.3.3-1-cachyos x86_64
 $ grep PRETTY_NAME /etc/os-release
-PRETTY_NAME="Ubuntu 24.04.5 LTS"
+PRETTY_NAME="CachyOS"
 $ ls --version | head -1
-ls (GNU coreutils) 9.4
+ls (GNU coreutils) 9.12
 $ strace --version | head -1
-strace -- version 6.8
+strace -- version 7.3
 $ tmux -V
-tmux 3.4
+tmux 3.8
+$ date
+Sun Nov 22 06:01:05 PM +07 2026
 \end{lstlisting}
 
-The Linux experiments ran in an Ubuntu 24.04 container on an aarch64 Linux
-kernel. The container had the \code{SYS\_PTRACE} capability so that
-\code{strace} could trace \code{cat}. The working files were on the container's
-overlay file system.
+\shot{linux/00_environment.png}{0.6\linewidth}{Linux environment.}
 
-Windows: \pending{fill in the \code{ver} output and the drive layout from
-\code{results/05\_windows\_links.txt}.}
+\paragraph{Windows.} Lab 1 ran on native Windows 11 from an Administrator
+Command Prompt. The machine has two separate NTFS volumes, \code{C:} and
+\code{D:}, which are needed for the cross-drive test.
+
+\begin{lstlisting}
+> ver
+Microsoft Windows [Version 10.0.22631.4751]
+> fsutil fsinfo volumeinfo C:
+Volume Name : Windows-SSD
+File System Name : NTFS
+Supports Reparse Points
+Supports Hard Links
+...
+> fsutil fsinfo volumeinfo D:
+Volume Name : New Volume
+File System Name : NTFS
+Supports Reparse Points
+Supports Hard Links
+...
+\end{lstlisting}
+
+The Windows username, the temporary run identifier, and the volume serial
+numbers are replaced with \code{USER}, \code{RUNID}, and \code{[REDACTED]} in
+the transcript and covered with gray boxes in the screenshots. The Windows
+screenshots show a read-only viewer of the captured command output, with two
+columns read from left to right.
+
+\shot{windows/00_environment.png}{\linewidth}{Windows environment and NTFS volumes.}
 
 \section{Lab 1: Symbolic and hard links}
 
@@ -124,8 +160,8 @@ Junction to directory & -- & \code{mklink /J link dir} \\
 \end{tabular}
 \end{center}
 
-Note that \code{ln} takes the source first, while \code{mklink} takes the new
-link name first.
+\code{ln} takes the source first, while \code{mklink} takes the new link name
+first.
 
 \subsection{Hard and soft links, then delete the source}
 
@@ -137,25 +173,25 @@ $ echo "original data" > source.txt
 $ ln source.txt hard.txt
 $ ln -s source.txt soft.txt
 $ ls -li
-total 12
-8976687 -rw-r--r-- 2 root root 14 Nov 21 09:26 hard.txt
-8976688 lrwxrwxrwx 1 root root 10 Nov 21 09:26 soft.txt -> source.txt
-8976687 -rw-r--r-- 2 root root 14 Nov 21 09:26 source.txt
+total 8
+3016 -rw-r--r-- 2 gunteed gunteed 14 Nov 22 18:01 hard.txt
+3017 lrwxrwxrwx 1 gunteed gunteed 10 Nov 22 18:01 soft.txt -> source.txt
+3016 -rw-r--r-- 2 gunteed gunteed 14 Nov 22 18:01 source.txt
 \end{lstlisting}
 
-\code{hard.txt} and \code{source.txt} share inode 8976687, and the link count
+\code{hard.txt} and \code{source.txt} share inode 3016, and the link count
 column shows 2. They are two names for one file. \code{soft.txt} has its own
-inode, type \code{l}, and a size of 10 bytes, which is the length of the string
-\code{source.txt} that it stores.
+inode (3017), type \code{l}, and a size of 10 bytes, which is the length of the
+string \code{source.txt} that it stores.
 
 Delete the source:
 
 \begin{lstlisting}
 $ rm source.txt
 $ ls -li
-total 8
-8976687 -rw-r--r-- 1 root root 14 Nov 21 09:26 hard.txt
-8976688 lrwxrwxrwx 1 root root 10 Nov 21 09:26 soft.txt -> source.txt
+total 4
+3016 -rw-r--r-- 1 gunteed gunteed 14 Nov 22 18:01 hard.txt
+3017 lrwxrwxrwx 1 gunteed gunteed 10 Nov 22 18:01 soft.txt -> source.txt
 $ cat hard.txt
 original data
 $ cat soft.txt
@@ -184,35 +220,49 @@ The soft link works again, but it now shows the new file, because it follows a
 name and not an inode. The hard link keeps the old data, because it is tied to
 the old inode.
 
-\paragraph{Windows.} The same steps in \code{windows-links.cmd}:
+\shot{linux/01_lab1_basic_links.png}{0.7\linewidth}{Linux: hard and soft link
+before and after deleting the source.}
+
+\paragraph{Windows.}\mbox{}
 
 \begin{lstlisting}
-echo original data> source.txt
-mklink /H hard.txt source.txt
-mklink soft.txt source.txt
-fsutil hardlink list hard.txt
-del source.txt
-type hard.txt
-type soft.txt
+> echo original data> source.txt
+> mklink /H hard.txt source.txt
+Hardlink created for hard.txt <<===>> source.txt
+> mklink soft.txt source.txt
+symbolic link created for soft.txt <<===>> source.txt
+> fsutil hardlink list hard.txt
+\Users\USER\AppData\Local\Temp\ps12-RUNID\source.txt
+\Users\USER\AppData\Local\Temp\ps12-RUNID\hard.txt
+> del source.txt
+> type hard.txt
+original data
+> type soft.txt
+The system cannot find the file specified.
+> echo new source> source.txt
+> type soft.txt
+new source
+> type hard.txt
+original data
 \end{lstlisting}
 
-NTFS behaves the same way. \code{fsutil hardlink list} shows both names for
-the file record. After \code{del source.txt}, \code{type hard.txt} still prints
-the data, and \code{type soft.txt} fails with ``The system cannot find the file
-specified.'' In \code{dir}, the symbolic link is shown as
-\code{<SYMLINK>} with its target in brackets.
-\pending{paste the \code{dir} and \code{type} output.}
+NTFS behaves the same way as Linux. \code{fsutil hardlink list} shows two names
+for one file record. After \code{del source.txt}, the hard link still holds the
+data, and the symbolic link fails until a new \code{source.txt} is created.
+
+\shot{windows/01_lab1_basic_links.png}{\linewidth}{Windows: hard and symbolic
+link before and after deleting the source.}
 
 \paragraph{Answer.} After the source is deleted, the hard link still works and
 holds the full data, because deleting a name only lowers the link count. The
 symbolic link remains as a file but is broken, because the path it stores no
-longer exists.
+longer exists. This is the same on Linux and Windows.
 
 \subsection{Level 1 and level 2 links}
 
 A level 1 link points to the source, and a level 2 link points to level 1.
 
-\paragraph{Symbolic chain, delete the source.}
+\paragraph{Symbolic chain, delete the source (Linux).}\mbox{}
 
 \begin{lstlisting}
 $ ln -s source.txt level1
@@ -230,13 +280,14 @@ The kernel resolves \code{level2} to \code{level1}, then to
 \code{source.txt}. When the end of the chain is missing, every link in the
 chain is broken.
 
-\paragraph{Symbolic chain, delete level 1.}
+\paragraph{Symbolic chain, delete level 1 (Linux).}\mbox{}
 
 \begin{lstlisting}
 $ rm level1
 $ ls -li
-8976697 lrwxrwxrwx 1 root root  6 Nov 21 09:26 level2 -> level1
-8976695 -rw-r--r-- 1 root root 13 Nov 21 09:26 source.txt
+total 4
+3026 lrwxrwxrwx 1 gunteed gunteed  6 Nov 22 18:01 level2 -> level1
+3024 -rw-r--r-- 1 gunteed gunteed 13 Nov 22 18:01 source.txt
 $ cat source.txt
 level 0 data
 $ cat level2
@@ -247,30 +298,36 @@ The source is safe, but \code{level2} is broken even though the source still
 exists. \code{level2} only knows the name \code{level1}; it does not know the
 source.
 
-\paragraph{Hard chain, delete the source.}
+\shot{linux/02a_lab1_symbolic_link_chain.png}{0.75\linewidth}{Linux: symbolic
+link chains.}
+
+\paragraph{Hard chain, delete the source (Linux).}\mbox{}
 
 \begin{lstlisting}
 $ ln source.txt level1
 $ ln level1 level2
 $ ls -li
-8976699 -rw-r--r-- 3 root root 13 Nov 21 09:26 level1
-8976699 -rw-r--r-- 3 root root 13 Nov 21 09:26 level2
-8976699 -rw-r--r-- 3 root root 13 Nov 21 09:26 source.txt
+total 12
+3028 -rw-r--r-- 3 gunteed gunteed 13 Nov 22 18:01 level1
+3028 -rw-r--r-- 3 gunteed gunteed 13 Nov 22 18:01 level2
+3028 -rw-r--r-- 3 gunteed gunteed 13 Nov 22 18:01 source.txt
 $ rm source.txt
 $ ls -li
-8976699 -rw-r--r-- 2 root root 13 Nov 21 09:26 level1
-8976699 -rw-r--r-- 2 root root 13 Nov 21 09:26 level2
+total 8
+3028 -rw-r--r-- 2 gunteed gunteed 13 Nov 22 18:01 level1
+3028 -rw-r--r-- 2 gunteed gunteed 13 Nov 22 18:01 level2
 $ cat level2
 level 0 data
 \end{lstlisting}
 
-\paragraph{Hard chain, delete level 1.}
+\paragraph{Hard chain, delete level 1 (Linux).}\mbox{}
 
 \begin{lstlisting}
 $ rm level1
 $ ls -li
-8976701 -rw-r--r-- 2 root root 13 Nov 21 09:26 level2
-8976701 -rw-r--r-- 2 root root 13 Nov 21 09:26 source.txt
+total 8
+3030 -rw-r--r-- 2 gunteed gunteed 13 Nov 22 18:01 level2
+3030 -rw-r--r-- 2 gunteed gunteed 13 Nov 22 18:01 source.txt
 $ cat level2
 level 0 data
 \end{lstlisting}
@@ -280,15 +337,60 @@ a link ``to level 1''; it resolves \code{level1} to its inode and adds a third
 name for that inode. A hard link chain has no levels. Deleting any one name
 only lowers the count from 3 to 2, and the other names keep working.
 
-\paragraph{Windows.} \code{windows-links.cmd} repeats the four cases with
-\code{mklink} and \code{mklink /H}. The results match Linux: a broken symbolic
-link anywhere in the chain breaks the levels above it, and hard links are
-unaffected by deleting any one name.
-\pending{paste the output of sections 1.2a--1.2d.}
+\shot{linux/02b_lab1_hard_link_chains.png}{0.7\linewidth}{Linux: hard link
+chains.}
+
+\paragraph{Windows.} The same four cases give the same results:
+
+\begin{lstlisting}
+sym-a> del source.txt
+sym-a> type level1
+The system cannot find the file specified.
+sym-a> type level2
+The system cannot find the file specified.
+
+sym-b> del level1
+sym-b> type source.txt
+level 0 data
+sym-b> type level2
+The system cannot find the file specified.
+
+hard-a> fsutil hardlink list level2
+...\hard-a\level1
+...\hard-a\source.txt
+...\hard-a\level2
+hard-a> del source.txt
+hard-a> type level2
+level 0 data
+
+hard-b> del level1
+hard-b> fsutil hardlink list level2
+...\hard-b\level2
+...\hard-b\source.txt
+hard-b> type level2
+level 0 data
+\end{lstlisting}
+
+\code{dir /a:l} lists the symbolic links as \code{<SYMLINK> level2 [level1]},
+so Windows also stores only the name of the next link. \code{fsutil hardlink
+list} shows three names for one file, which drop to two after any one is
+deleted.
+
+\shot{windows/02a_lab1_symbolic_delete_source.png}{\linewidth}{Windows: symbolic
+chain, delete the source.}
+\shot{windows/02b_lab1_symbolic_delete_level1.png}{\linewidth}{Windows: symbolic
+chain, delete level 1.}
+\shot{windows/02c_lab1_hard_link_chains.png}{\linewidth}{Windows: hard link
+chains, delete the source or level 1.}
+
+\paragraph{Answer.} With symbolic links, deleting the source breaks both
+levels, and deleting level 1 breaks level 2 even though the source still
+exists. With hard links, deleting the source or level 1 does not affect
+level 2, because all names point directly to the same file.
 
 \subsection{Links to directories and a loop}
 
-\paragraph{Linux.}
+\paragraph{Linux.}\mbox{}
 
 \begin{lstlisting}
 $ mkdir -p top/sub
@@ -297,7 +399,8 @@ $ ln top top-hard
 ln: top: hard link not allowed for directory
 $ ln -s top top-soft
 $ ls -l top-soft/sub
--rw-r--r-- 1 root root 12 Nov 21 09:26 file.txt
+total 4
+-rw-r--r-- 1 gunteed gunteed 12 Nov 22 18:01 file.txt
 \end{lstlisting}
 
 Linux refuses hard links to directories (\code{EPERM}). A directory hard link
@@ -312,13 +415,14 @@ Now create a symbolic link inside \code{top/sub} that points back up to
 \begin{lstlisting}
 $ ln -s .. top/sub/up
 $ ls -l top/sub
--rw-r--r-- 1 root root 12 Nov 21 09:26 file.txt
-lrwxrwxrwx 1 root root  2 Nov 21 09:26 up -> ..
+total 4
+-rw-r--r-- 1 gunteed gunteed 12 Nov 22 18:01 file.txt
+lrwxrwxrwx 1 gunteed gunteed  2 Nov 22 18:01 up -> ..
 $ ls top/sub/up/sub/up/sub/up/sub
 file.txt
 up
 $ realpath top/sub/up/sub/up/sub/up
-/tmp/ps12.EXu6oJ/lab1/top
+/tmp/ps12.1arIAs/lab1/top
 \end{lstlisting}
 
 The graph now has a cycle \code{top} $\rightarrow$ \code{sub} $\rightarrow$
@@ -346,8 +450,8 @@ ls: top/sub/up: not listing already-listed directory
 $ find -L top
 top
 top/sub
+find: File system loop detected; the following directory is part of the cycle: 'top/sub/up'
 top/sub/file.txt
-find: File system loop detected; 'top/sub/up' is part of the same file system loop as 'top'.
 \end{lstlisting}
 
 \code{ls -R} does not loop. By default it does not follow symbolic links while
@@ -356,57 +460,101 @@ follow links (\code{-L}), \code{ls} remembers the device and inode of each
 directory it has listed and refuses to list one twice. \code{find -L} uses the
 same check and reports a file system loop. The protection is in the tools, not
 in the kernel; a naive program that follows symbolic links would recurse until
-the path limit (\code{ELOOP} or \code{ENAMETOOLONG}).
+it hits the kernel's limits on path length or link depth.
 
-\paragraph{Windows.}
+\shot{linux/03_lab1_directory_loop.png}{0.85\linewidth}{Linux: directory links
+and the loop back to \code{top}.}
+
+\paragraph{Windows.}\mbox{}
 
 \begin{lstlisting}
-mkdir top\sub
-mklink /H top-hard top
-mklink /D top-soft top
-mklink /J top-junction "%WORK%\top"
-mklink /J top\sub\up "%WORK%\top"
-dir /s /b top > loop-list.txt
+> mkdir top\sub
+> echo file in sub> top\sub\file.txt
+> mklink /H top-hard top
+Access is denied.
+> mklink /D top-soft top
+symbolic link created for top-soft <<===>> top
+> mklink /J top-junction "C:\Users\USER\AppData\Local\Temp\ps12-RUNID\top"
+Junction created for top-junction <<===>> C:\Users\USER\AppData\Local\Temp\ps12-RUNID\top
+> type top-soft\sub\file.txt
+file in sub
+> type top-junction\sub\file.txt
+file in sub
 \end{lstlisting}
 
-\code{mklink /H} on a folder fails with ``Access is denied.'', so NTFS also
-forbids directory hard links. \code{mklink /D} (symbolic link) and
-\code{mklink /J} (junction) both work. After creating the junction
-\code{top\textbackslash sub\textbackslash up}, \code{dir /s} follows it
-and lists \code{top\textbackslash sub\textbackslash up\textbackslash
-sub\textbackslash up\textbackslash\ldots} again and again. \code{dir} has no
-inode check like GNU \code{ls}. The listing stops only when the path reaches
-the Windows path length limit (about 260 characters with the default
-settings). The script counts the lines and prints the deepest path to show
-this.
-\pending{paste the line count and the last paths from \code{loop-list.txt}.}
+NTFS also forbids directory hard links (\code{Access is denied.}). A directory
+symbolic link (\code{<SYMLINKD>}) and a junction (\code{<JUNCTION>}) both work.
+
+\shot{windows/03a_lab1_directory_links.png}{\linewidth}{Windows: directory hard
+link, symbolic link, and junction.}
+
+Now create a junction inside \code{top\textbackslash sub} that points back to
+\code{top}, and list it recursively:
+
+\begin{lstlisting}
+> mklink /J top\sub\up "C:\Users\USER\AppData\Local\Temp\ps12-RUNID\top"
+Junction created for top\sub\up <<===>> C:\Users\USER\AppData\Local\Temp\ps12-RUNID\top
+> type top\sub\up\sub\up\sub\file.txt
+file in sub
+> dir /s /b top > loop-list.txt
+> find /c /v "" loop-list.txt
+---------- LOOP-LIST.TXT: 192
+> powershell ... (first 3 paths, last 3 paths, longest path)
+First 3 paths:
+C:\Users\USER\AppData\Local\Temp\ps12-RUNID\top\sub
+C:\Users\USER\AppData\Local\Temp\ps12-RUNID\top\sub\file.txt
+C:\Users\USER\AppData\Local\Temp\ps12-RUNID\top\sub\up
+Last 3 paths:
+C:\...\ps12-RUNID\top\sub\up\sub\up\sub ... \up\sub
+C:\...\ps12-RUNID\top\sub\up\sub\up\sub ... \up\sub\file.txt
+C:\...\ps12-RUNID\top\sub\up\sub\up\sub ... \up\sub\up
+Maximum path characters:
+505
+\end{lstlisting}
+
+\code{dir /s} follows the junction and lists the same three entries
+(\code{sub}, \code{sub\textbackslash file.txt}, and \code{sub\textbackslash up})
+again inside every \code{up}. Unlike GNU \code{ls}, it has no
+check for a directory it has already listed. The output had 192 lines, which
+is 3 entries per level for 64 levels. The longest path was 505 characters,
+well past the classic 260-character \code{MAX\_PATH}, so path length was not
+what stopped it.
+
+The deepest paths in the transcript contain exactly 63 \code{\textbackslash up}
+junctions. Windows allows at most 63 reparse points in one path. When
+\code{dir} tries to open the 64th \code{up}, the open fails, so it cannot go
+deeper and the listing ends. Windows does not detect the loop; it stops only
+because of this limit.
+
+\shot{windows/03b_lab1_directory_loop.png}{\linewidth}{Windows: junction loop
+and \code{dir /s}.}
 
 \paragraph{Answer.} Both systems allow links to folders only as symbolic links
 (and junctions on Windows), never as hard links. A loop back to an upper-level
-folder can be created. On Linux, \code{ls -R} is safe because it does not
-follow links, and \code{ls -RL} and \code{find -L} detect the loop. On
-Windows, \code{dir /s} follows the junction and repeats the same folders until
-the path becomes too long.
+folder can be created on both. On Linux, \code{ls -R} is safe because it does
+not follow links, and \code{ls -RL} and \code{find -L} detect the loop. On
+Windows, \code{dir /s} follows the junction and repeats the same folders 63
+times until it reaches the reparse-point limit.
 
 \subsection{Link on drive D: to a source on drive C:}
 
-A hard link is only a directory entry that names an inode number, and inode
-numbers are only meaningful inside one file system. A hard link therefore
-cannot cross file systems or drives. A symbolic link stores a path, so it can
-point anywhere.
+A hard link is only a directory entry that names an inode or file record, and
+those numbers are only meaningful inside one file system. A hard link
+therefore cannot cross file systems or drives. A symbolic link stores a path,
+so it can point anywhere.
 
-\paragraph{Linux.} Linux has no drive letters, so the test used two different
-mounted file systems: \code{/tmp} on the container overlay and \code{/dev/shm}
-on \code{tmpfs}.
+\paragraph{Linux.} Linux has no drive letters, so the test used two separately
+mounted file systems, \code{/tmp} and \code{/dev/shm}. Both are \code{tmpfs},
+but they are different mounts with different device numbers.
 
 \begin{lstlisting}
-$ df -T /tmp /dev/shm
-Filesystem     Type    1K-blocks     Used Available Use% Mounted on
-overlay        overlay 133824512 32959708 100864804  25% /
-shm            tmpfs     4098048        0   4098048   0% /dev/shm
+$ df -T /tmp /dev/shm | cat
+Filesystem     Type  1K-blocks  Used Available Use% Mounted on
+tmpfs          tmpfs   8120332 94276   8026056   2% /tmp
+tmpfs          tmpfs   8120332 17944   8102388   1% /dev/shm
 $ stat -c "%n device=%d" /tmp /dev/shm
-/tmp device=68
-/dev/shm device=140
+/tmp device=55
+/dev/shm device=28
 $ ln /tmp/ps12-fsA.txt /dev/shm/ps12-hard.txt
 ln: failed to create hard link '/dev/shm/ps12-hard.txt' => '/tmp/ps12-fsA.txt': Invalid cross-device link
 $ ln -s /tmp/ps12-fsA.txt /dev/shm/ps12-soft.txt
@@ -417,19 +565,30 @@ data on file system A
 The hard link fails with \code{EXDEV} (``Invalid cross-device link''). The
 symbolic link works.
 
-\paragraph{Windows.}
+\shot{linux/04_lab1_cross_filesystem.png}{0.85\linewidth}{Linux: links across
+two file systems.}
+
+\paragraph{Windows.}\mbox{}
 
 \begin{lstlisting}
-mklink /H D:\ps12-links\hard.txt "%WORK%\hard.txt"
-mklink D:\ps12-links\soft.txt "%WORK%\hard.txt"
-mklink /J D:\ps12-links\junction "%WORK%\top"
+> mklink /H "D:\ps12-RUNID\hard.txt" "C:\Users\USER\AppData\Local\Temp\ps12-RUNID\hard.txt"
+The system cannot move the file to a different disk drive.
+> mklink "D:\ps12-RUNID\soft.txt" "C:\Users\USER\AppData\Local\Temp\ps12-RUNID\hard.txt"
+symbolic link created for D:\ps12-RUNID\soft.txt <<===>> C:\...\hard.txt
+> mklink /J "D:\ps12-RUNID\junction" "C:\Users\USER\AppData\Local\Temp\ps12-RUNID\top"
+Junction created for D:\ps12-RUNID\junction <<===>> C:\...\top
+> type "D:\ps12-RUNID\soft.txt"
+original data
+> type "D:\ps12-RUNID\junction\sub\file.txt"
+file in sub
 \end{lstlisting}
 
 The hard link fails with ``The system cannot move the file to a different disk
-drive.'' The symbolic link and the junction on \code{D:} work, because both
-store a path to \code{C:}. A junction can only point to a local volume, while a
-symbolic link can also point to a network path.
-\pending{paste the output of section 1.4.}
+drive.'' The file symbolic link and the directory junction on \code{D:} both
+work, because both store a path to \code{C:}.
+
+\shot{windows/04_lab1_cross_drive.png}{\linewidth}{Windows: links on D: to a
+source on C:.}
 
 \paragraph{Answer.} Yes for symbolic links and junctions; no for hard links.
 
@@ -440,11 +599,11 @@ symbolic link can also point to a network path.
 \begin{lstlisting}
 $ mkfifo pipeFile
 $ ls -la pipeFile
-prw-r--r-- 1 root root 0 Nov 21 09:26 pipeFile
+prw-r--r-- 1 gunteed gunteed 0 Nov 22 18:01 pipeFile
 $ stat pipeFile
   File: pipeFile
   Size: 0         	Blocks: 0          IO Block: 4096   fifo
-Device: 0,68	Inode: 8976709     Links: 1
+Device: 0,55	Inode: 3038        Links: 1
 $ file pipeFile
 pipeFile: fifo (named pipe)
 \end{lstlisting}
@@ -453,11 +612,23 @@ The first character of the mode is \code{p}, which marks a named pipe. The
 file has an inode and a name in the directory, but its size and block count
 are 0. The pipe never stores data on disk.
 
+A separate test shows that a writer blocks when no reader exists:
+
+\begin{lstlisting}
+$ timeout 2 sh -c 'echo hello > pipeFile'
+[exit status 124]
+\end{lstlisting}
+
+Exit status 124 means \code{timeout} had to kill the command. The shell never
+finished opening \code{pipeFile} for writing.
+
+\shot{linux/05_lab2_fifo_setup.png}{0.75\linewidth}{Creating and listing the
+named pipe.}
+
 \subsection{Two terminals}
 
 Two real terminals were driven with \code{tmux}. Terminal~1 (T1) is the writer
-and Terminal~2 (T2) is the reader. The screen of both terminals was captured
-after each step.
+and Terminal~2 (T2) is the reader. Both screens were captured after each step.
 
 \begin{lstlisting}
 --- Step 1: T1 runs cat > pipeFile; no reader yet, so T1 waits in open() ---
@@ -499,22 +670,15 @@ third line
 T2$
 --- After the session ---
 $ ls -la pipeFile
-prw-r--r-- 1 root root 0 Nov 21 09:26 pipeFile
+prw-r--r-- 1 gunteed gunteed 0 Nov 22 18:01 pipeFile
 \end{lstlisting}
 
 Each line typed in T1 appears in T2 right after Enter. After \code{\^{}D},
 both commands return to the prompt. The pipe file is still there and its size
 is still 0.
 
-A separate test shows that a writer blocks when no reader exists:
-
-\begin{lstlisting}
-$ timeout 2 sh -c 'echo hello > pipeFile'
-[exit status 124]
-\end{lstlisting}
-
-Exit status 124 means \code{timeout} had to kill the command. The shell never
-finished opening \code{pipeFile} for writing.
+\shot{linux/06_lab2_fifo_terminals.png}{0.7\linewidth}{Two-terminal session
+through the named pipe.}
 
 \subsection{Concept and explanation}
 
@@ -558,30 +722,36 @@ communication needs two FIFOs.
 
 The file \code{foo} was created with \code{echo hello > foo}, and \code{cat foo}
 was traced on a terminal. The lines before the \code{openat} of \code{foo}
-load the C library and are omitted here.
+load the C library and the locale and are omitted here.
 
 \begin{lstlisting}
 $ strace cat foo
 ...
-fstat(1, {st_mode=S_IFCHR|0620, st_rdev=makedev(0x88, 0), ...}) = 0
+fstat(1, {st_mode=S_IFCHR|0600, st_rdev=makedev(0x88, 0x7), ...}) = 0
 openat(AT_FDCWD, "foo", O_RDONLY)       = 3
 fstat(3, {st_mode=S_IFREG|0644, st_size=6, ...}) = 0
 fadvise64(3, 0, 0, POSIX_FADV_SEQUENTIAL) = 0
-read(3, "hello\n", 131072)              = 6
+mmap(NULL, 270336, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7f12ac7be000
+read(3, "hello\n", 262144)              = 6
 write(1, "hello\n", 6hello
 )                  = 6
-read(3, "", 131072)                     = 0
+read(3, "", 262144)                     = 0
 close(3)                                = 0
+munmap(0x7f12ac7be000, 270336)          = 0
 close(1)                                = 0
 close(2)                                = 0
 exit_group(0)                           = ?
 +++ exited with 0 +++
 \end{lstlisting}
 
-The four lines match the slide. The only difference is the buffer size: this
-version of GNU \code{cat} asks for 131072 bytes (128~KiB), while the slide's
-system asked for 32768 bytes (32~KiB). Newer coreutils use a larger I/O
-buffer.
+The four lines match the slide. The only difference is the buffer size: GNU
+coreutils 9.12 asks for 262144 bytes (256~KiB), while the slide's system asked
+for 32768 bytes (32~KiB). Newer coreutils use a larger I/O buffer to make fewer
+system calls on large files. The \code{mmap} of 270336 bytes just before the
+first \code{read} allocates that buffer.
+
+\shot{linux/07_lab3_strace_key_calls.png}{0.85\linewidth}{\code{strace} of
+\code{cat foo}, file-related calls only.}
 
 \subsection{The four lines}
 
@@ -627,7 +797,7 @@ It is the return value of \code{read} (bytes read), the third argument of
 written). \\
 \code{32768} & The size of \code{cat}'s buffer: the maximum number of bytes
 that one \code{read()} may return. It is a request, not the file size. Our
-system used 131072. \\
+system used 262144. \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -654,11 +824,13 @@ refer to, not only on the command.
 
 \section{Conclusion}
 
-Hard links are extra names for one inode, so they survive deletion of any
-other name, but they cannot point to directories or cross file systems.
-Symbolic links store a path, so they can point to directories and other
-drives, but they break when the target name disappears and they can create
-loops in the directory graph. Recursive tools must detect those loops.
+Hard links are extra names for one inode or file record, so they survive
+deletion of any other name, but they cannot point to directories or cross file
+systems. Symbolic links and junctions store a path, so they can point to
+directories and other drives, but they break when the target name disappears
+and they can create loops in the directory graph. GNU \code{ls} and
+\code{find} detect those loops, while Windows \code{dir /s} follows them until
+the 63-reparse-point limit.
 
 A named pipe is a file system name for a kernel buffer. Blocking
 \code{open}, blocking \code{read}, and end-of-file on writer close explain the

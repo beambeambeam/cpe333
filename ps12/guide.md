@@ -18,8 +18,6 @@ The script drives two real terminals with tmux for the named pipe lab and captur
 The current transcripts were captured directly on CachyOS x86_64 (kernel
 `7.3.3-1-cachyos`, GNU coreutils `9.12`, strace `7.3`, tmux `3.8`). The Lab 3
 requested buffer size depends on the installed coreutils version.
-The existing `report.pdf` documents the earlier Ubuntu 24.04 run; these
-transcripts and screenshots are a newer CachyOS recapture.
 
 An Ubuntu 24.04 container can be used for a separate reproduction:
 
@@ -74,4 +72,4 @@ powershell.exe -NoProfile -File .\view-windows-results.ps1
 
 The viewer uses the Windows .NET Framework compiler and reads `results/05_windows_links.txt`; it does not rerun commands. Any intermediate viewer data is generated under the system temporary directory. Screenshots are stored in `results/screenshots/windows/`, matching the Linux PR's platform-specific folder convention. Read the two screenshot columns from left to right; each states its working directory.
 
-The existing `report.tex` and `report.pdf` still contain the original Linux run and pending Windows placeholders. Use the Windows screenshots and combined transcript as the completed Windows evidence. In particular, the report's assumed 260-character stopping point for `dir /s` is not what this Windows run observed: the loop produced 192 paths with a maximum length of 505 characters. The output does not identify the exact stopping cause; Windows also imposes [reparse-point traversal limits](https://learn.microsoft.com/en-us/windows/win32/fileio/reparse-points).
+`report.tex` and `report.pdf` use this Windows transcript and screenshots. The deepest `dir /s` paths contain 63 `\up` junctions, which matches the Windows limit of 63 [reparse points](https://learn.microsoft.com/en-us/windows/win32/fileio/reparse-points) in one path.
