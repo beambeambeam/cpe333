@@ -1,12 +1,12 @@
 $ uname -srm
-Linux 7.2.12-orbstack-00394-gbecdd6130068 aarch64
+Linux 7.3.3-1-cachyos x86_64
 $ grep PRETTY_NAME /etc/os-release
-PRETTY_NAME="Ubuntu 24.04.5 LTS"
+PRETTY_NAME="CachyOS"
 $ ls --version | head -1
-ls (GNU coreutils) 9.4
+ls (GNU coreutils) 9.12
 $ strace --version | head -1
-strace -- version 6.8
+strace -- version 7.3
 $ tmux -V
-tmux 3.4
+tmux 3.8
 $ date
-Sat Nov 21 09:28:27 UTC 2026
+Sun Nov 22 06:01:05 PM +07 2026

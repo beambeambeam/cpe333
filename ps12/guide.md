@@ -8,13 +8,20 @@ The assignment is in `problem-session.md`. Raw evidence goes in `results/`.
 
 ```bash
 cd ps12
-sudo apt install strace tmux file   # Debian/Ubuntu
+sudo pacman -S --needed strace tmux file   # CachyOS/Arch
+# Or: sudo apt install strace tmux file    # Debian/Ubuntu
 ./run-linux.sh
 ```
 
 The script drives two real terminals with tmux for the named pipe lab and captures both screens after each step. It runs `strace` under `script` so `cat` writes to a terminal, which matches the slide output.
 
-The committed transcripts came from an Ubuntu 24.04 container on an aarch64 OrbStack VM:
+The current transcripts were captured directly on CachyOS x86_64 (kernel
+`7.3.3-1-cachyos`, GNU coreutils `9.12`, strace `7.3`, tmux `3.8`). The Lab 3
+requested buffer size depends on the installed coreutils version.
+The existing `report.pdf` documents the earlier Ubuntu 24.04 run; these
+transcripts and screenshots are a newer CachyOS recapture.
+
+An Ubuntu 24.04 container can be used for a separate reproduction:
 
 ```bash
 docker run --rm --cap-add SYS_PTRACE --security-opt seccomp=unconfined \

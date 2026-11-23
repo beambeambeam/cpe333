@@ -1,15 +1,15 @@
 $ mkfifo pipeFile
 $ ls -la pipeFile
-prw-r--r-- 1 root root 0 Nov 21 09:28 pipeFile
+prw-r--r-- 1 gunteed gunteed 0 Nov 22 18:01 pipeFile
 $ stat pipeFile
   File: pipeFile
   Size: 0         	Blocks: 0          IO Block: 4096   fifo
-Device: 0,68	Inode: 8977882     Links: 1
-Access: (0644/prw-r--r--)  Uid: (    0/    root)   Gid: (    0/    root)
-Access: 2026-11-21 09:28:27.238474434 +0000
-Modify: 2026-11-21 09:28:27.238474434 +0000
-Change: 2026-11-21 09:28:27.238474434 +0000
- Birth: 2026-11-21 09:28:27.238474434 +0000
+Device: 0,55	Inode: 3038        Links: 1
+Access: (0644/prw-r--r--)  Uid: ( 1000/ gunteed)   Gid: ( 1000/ gunteed)
+Access: 2026-11-22 18:01:05.306977016 +0700
+Modify: 2026-11-22 18:01:05.306977016 +0700
+Change: 2026-11-22 18:01:05.306977016 +0700
+ Birth: 2026-11-22 18:01:05.306977016 +0700
 $ file pipeFile 2>/dev/null || stat -c %F pipeFile
 pipeFile: fifo (named pipe)
 
