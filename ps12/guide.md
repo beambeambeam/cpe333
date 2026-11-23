@@ -35,11 +35,36 @@ docker run --rm --cap-add SYS_PTRACE --security-opt seccomp=unconfined \
 
 ## Windows (Lab 1)
 
-`mklink` needs an elevated Command Prompt, or Developer Mode for file and directory symbolic links. Hard links (`/H`) and junctions (`/J`) work without elevation. Use NTFS volumes.
+The Windows runner requires an Administrator Command Prompt for file and directory symbolic links. Hard links (`/H`) and junctions (`/J`) do not themselves require elevation. Use NTFS volumes. The runner does not change Developer Mode or system settings.
 
 ```bat
 cd ps12
-windows-links.cmd D: > results\05_windows_links.txt 2>&1
+windows-links.cmd D:
 ```
 
-The argument is the second drive for the cross-drive test. Use any other NTFS drive letter if `D:` does not exist. Take screenshots of the console if the report needs images.
+The argument is the second drive for the cross-drive test. Use another NTFS drive letter if `D:` does not exist. `run-windows.ps1` runs actual `cmd.exe` commands, captures stdout, stderr, and exit codes, and writes the combined transcript to [results/05_windows_links.txt](results/05_windows_links.txt). Expected failures, such as reading a dangling symbolic link, are checked as failures rather than silently treated as successes.
+
+Each run creates new isolated directories on C: and the second drive, bounds each command to 10 seconds, removes the junction loop before cleanup, and removes only those run directories. It never deletes an existing fixed-name `ps12-links` directory.
+
+The Windows capture was made on 22 November 2026 at 20:36-20:37 +07:00, with native Windows version `10.0.22631.4751` and two distinct NTFS volumes, C: and D:. All 76 command and content checks passed. The transcript and eight screenshots contain the Windows evidence. For privacy, the Windows username, temporary run identifier, and volume serial numbers are replaced with placeholders in the transcript and covered with gray boxes in the screenshots. Commands, exit codes, and experimental results are preserved. The reported 505-character path length is the original measurement before redaction. Review new captures for local identifiers before publishing them.
+
+| Screenshot | Observed result |
+| --- | --- |
+| [Environment](results/screenshots/windows/00_environment.png) | Native Windows version and distinct C: and D: NTFS volumes. |
+| [Basic links](results/screenshots/windows/01_lab1_basic_links.png) | A hard link retains the original data after source deletion; a symbolic link breaks, then follows the recreated source. |
+| [Symbolic chain: delete source](results/screenshots/windows/02a_lab1_symbolic_delete_source.png) | Both symbolic levels break after source deletion. |
+| [Symbolic chain: delete level 1](results/screenshots/windows/02b_lab1_symbolic_delete_level1.png) | The source survives, but level 2 breaks. |
+| [Hard-link cases](results/screenshots/windows/02c_lab1_hard_link_chains.png) | Level 2 survives deletion of either the source or the intermediate name. |
+| [Directory links](results/screenshots/windows/03a_lab1_directory_links.png) | Directory hard links fail; directory symbolic links and junctions work. |
+| [Directory loop](results/screenshots/windows/03b_lab1_directory_loop.png) | Recursive `dir /s` follows the junction repeatedly: 192 paths, maximum length 505 characters. |
+| [Cross-drive links](results/screenshots/windows/04_lab1_cross_drive.png) | D:-to-C: hard links fail; symbolic links and directory junctions work. |
+
+The screenshots show a native read-only viewer of the captured command output. They are screenshots of that viewer, rather than live Command Prompt windows. To reopen it:
+
+```powershell
+powershell.exe -NoProfile -File .\view-windows-results.ps1
+```
+
+The viewer uses the Windows .NET Framework compiler and reads `results/05_windows_links.txt`; it does not rerun commands. Any intermediate viewer data is generated under the system temporary directory. Screenshots are stored in `results/screenshots/windows/`, matching the Linux PR's platform-specific folder convention. Read the two screenshot columns from left to right; each states its working directory.
+
+The existing `report.tex` and `report.pdf` still contain the original Linux run and pending Windows placeholders. Use the Windows screenshots and combined transcript as the completed Windows evidence. In particular, the report's assumed 260-character stopping point for `dir /s` is not what this Windows run observed: the loop produced 192 paths with a maximum length of 505 characters. The output does not identify the exact stopping cause; Windows also imposes [reparse-point traversal limits](https://learn.microsoft.com/en-us/windows/win32/fileio/reparse-points).
